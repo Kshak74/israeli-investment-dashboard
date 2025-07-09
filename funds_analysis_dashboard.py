@@ -561,16 +561,22 @@ def create_dashboard(df):
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
                 margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
                 xaxis=dict(
-                    tickfont=dict(size=12, color='#F3F6FB'),
+                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
                     tickangle=-45 if len(geo_data) > 5 else 0,  # Rotate labels if many categories
                     tickmode='auto',
-                    nticks=10 if len(geo_data) > 10 else len(geo_data),  # Limit number of ticks
-                    tickwidth=2,  # Thicker tick marks
+                    nticks=8 if len(geo_data) > 8 else len(geo_data),  # Fewer ticks to prevent overlap
+                    tickwidth=3,  # Thicker tick marks
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='rgba(255,255,255,0.1)'
                 ),
                 yaxis=dict(
-                    tickfont=dict(size=12, color='#F3F6FB'),
-                    tickwidth=2,  # Thicker tick marks
+                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
+                    tickwidth=3,  # Thicker tick marks
                     tickformat='.2s',  # Format large numbers (M for millions, etc.)
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='rgba(255,255,255,0.1)'
                 )
             )
             st.plotly_chart(fig_geo_bar, use_container_width=True)
@@ -645,16 +651,22 @@ def create_dashboard(df):
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
                 margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
                 xaxis=dict(
-                    tickfont=dict(size=12, color='#F3F6FB'),
+                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
                     tickangle=-45 if len(strategy_data) > 5 else 0,  # Rotate labels if many categories
                     tickmode='auto',
-                    nticks=10 if len(strategy_data) > 10 else len(strategy_data),  # Limit number of ticks
-                    tickwidth=2,  # Thicker tick marks
+                    nticks=8 if len(strategy_data) > 8 else len(strategy_data),  # Fewer ticks to prevent overlap
+                    tickwidth=3,  # Thicker tick marks
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='rgba(255,255,255,0.1)'
                 ),
                 yaxis=dict(
-                    tickfont=dict(size=12, color='#F3F6FB'),
-                    tickwidth=2,  # Thicker tick marks
+                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
+                    tickwidth=3,  # Thicker tick marks
                     tickformat='.2s',  # Format large numbers (M for millions, etc.)
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='rgba(255,255,255,0.1)'
                 )
             )
             st.plotly_chart(fig_strategy_bar, use_container_width=True)
@@ -704,12 +716,30 @@ def create_dashboard(df):
         st.markdown('<div class="sub-header">NAV Distribution by Main Characteristic</div>', unsafe_allow_html=True)
         
         try:
+            # Ensure main characteristic column contains valid string values
+            if main_characteristic_column not in filtered_df.columns:
+                st.error(f"Column '{main_characteristic_column}' not found in the data. Please select a valid column.")
+                return
+                
+            # Convert main characteristic column to string to avoid type issues
+            filtered_df[main_characteristic_column] = filtered_df[main_characteristic_column].astype(str)
+            
+            # Ensure NAV column is numeric
+            filtered_df[nav_column] = pd.to_numeric(filtered_df[nav_column], errors='coerce')
+            
+            # Drop rows with missing values in key columns
+            valid_df = filtered_df.dropna(subset=[main_characteristic_column, nav_column])
+            
+            if valid_df.empty:
+                st.warning("No valid data available for analysis after filtering out missing values.")
+                return
+                
             # Group by main characteristic
-            char_data = filtered_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
+            char_data = valid_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
             char_data = char_data.sort_values(by=nav_column, ascending=False)
             
             # Count investments per characteristic
-            char_count = filtered_df.groupby(main_characteristic_column).size().reset_index(name='Count')
+            char_count = valid_df.groupby(main_characteristic_column).size().reset_index(name='Count')
             char_count = char_count.sort_values(by='Count', ascending=False)
             
             # Create charts
@@ -734,16 +764,22 @@ def create_dashboard(df):
                     font=dict(color='#F3F6FB', size=14),  # Increase font size
                     margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
                     xaxis=dict(
-                        tickfont=dict(size=12, color='#F3F6FB'),
+                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
                         tickangle=-45 if len(char_data) > 5 else 0,  # Rotate labels if many categories
                         tickmode='auto',
-                        nticks=10 if len(char_data) > 10 else len(char_data),  # Limit number of ticks
-                        tickwidth=2,  # Thicker tick marks
+                        nticks=8 if len(char_data) > 8 else len(char_data),  # Fewer ticks to prevent overlap
+                        tickwidth=3,  # Thicker tick marks
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='rgba(255,255,255,0.1)'
                     ),
                     yaxis=dict(
-                        tickfont=dict(size=12, color='#F3F6FB'),
-                        tickwidth=2,  # Thicker tick marks
+                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
+                        tickwidth=3,  # Thicker tick marks
                         tickformat='.2s',  # Format large numbers (M for millions, etc.)
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='rgba(255,255,255,0.1)'
                     )
                 )
                 st.plotly_chart(fig_char_bar, use_container_width=True)
@@ -781,14 +817,33 @@ def create_dashboard(df):
             st.subheader("Number of Investments by Main Characteristic")
             
             # Merge NAV and count data
-            merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
-            merged_data['Average NAV'] = merged_data[nav_column] / merged_data['Count']
-            merged_data = merged_data.sort_values(by=nav_column, ascending=False)
-            
-            # Format the table columns
-            merged_data['NAV (ILS)'] = merged_data[nav_column].apply(lambda x: format_number(x))
-            merged_data['Average NAV (ILS)'] = merged_data['Average NAV'].apply(lambda x: format_number(x))
-            merged_data['% of Total NAV'] = (merged_data[nav_column] / total_nav * 100).apply(lambda x: f"{x:.1f}%")
+            try:
+                merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
+                
+                # Ensure both columns are numeric before division
+                merged_data[nav_column] = pd.to_numeric(merged_data[nav_column], errors='coerce')
+                merged_data['Count'] = pd.to_numeric(merged_data['Count'], errors='coerce')
+                
+                # Handle division by zero and NaN values
+                merged_data['Average NAV'] = merged_data.apply(
+                    lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
+                    axis=1
+                )
+                merged_data = merged_data.sort_values(by=nav_column, ascending=False)
+                
+                # Format the table columns with error handling
+                merged_data['NAV (ILS)'] = merged_data[nav_column].apply(lambda x: format_number(x) if pd.notnull(x) else 'N/A')
+                merged_data['Average NAV (ILS)'] = merged_data['Average NAV'].apply(lambda x: format_number(x) if pd.notnull(x) else 'N/A')
+                
+                # Calculate percentage of total NAV with error handling
+                if total_nav > 0:
+                    merged_data['% of Total NAV'] = merged_data[nav_column].apply(lambda x: f"{(x / total_nav * 100):.1f}%" if pd.notnull(x) else 'N/A')
+                else:
+                    merged_data['% of Total NAV'] = 'N/A'
+            except Exception as e:
+                st.error(f"Error calculating table data: {str(e)}")
+                st.info("Please check that your data contains valid numeric values for NAV and count calculations.")
+                return
             
             # Display the table
             display_cols = [main_characteristic_column, 'Count', 'NAV (ILS)', 'Average NAV (ILS)', '% of Total NAV']
@@ -1114,16 +1169,22 @@ def create_dashboard(df):
                     font=dict(color='#F3F6FB', size=14),
                     margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
                     xaxis=dict(
-                        tickfont=dict(size=12, color='#F3F6FB'),
+                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
                         tickangle=-45 if len(analysis["data"]) > 5 else 0,  # Rotate labels if many categories
                         tickmode='auto',
-                        nticks=10 if len(analysis["data"]) > 10 else len(analysis["data"]),  # Limit number of ticks
-                        tickwidth=2,  # Thicker tick marks
+                        nticks=8 if len(analysis["data"]) > 8 else len(analysis["data"]),  # Fewer ticks to prevent overlap
+                        tickwidth=3,  # Thicker tick marks
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='rgba(255,255,255,0.1)'
                     ),
                     yaxis=dict(
-                        tickfont=dict(size=12, color='#F3F6FB'),
-                        tickwidth=2,  # Thicker tick marks
+                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
+                        tickwidth=3,  # Thicker tick marks
                         tickformat='.2s',  # Format large numbers (M for millions, etc.)
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='rgba(255,255,255,0.1)'
                     )
                 )
                 st.plotly_chart(fig_bar, use_container_width=True)
