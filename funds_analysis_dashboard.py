@@ -559,16 +559,17 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
+                margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
                 xaxis=dict(
-                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                    tickangle=-45 if len(geo_data) > 5 else 0,  # Rotate labels if many categories
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
+                    tickangle=-60 if len(geo_data) > 5 else 0,  # Steeper rotation for better readability
                     tickmode='auto',
                     nticks=8 if len(geo_data) > 8 else len(geo_data),  # Fewer ticks to prevent overlap
                     tickwidth=3,  # Thicker tick marks
                     showgrid=True,
                     gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)'
+                    gridcolor='rgba(255,255,255,0.1)',
+                    automargin=True,  # Automatically adjust margins to fit labels
                 ),
                 yaxis=dict(
                     tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
@@ -596,7 +597,7 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=40, r=40, t=50, b=40),
+                margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
                 legend=dict(
                     font=dict(size=12, color='#F3F6FB'),
                     itemsizing='constant',  # Consistent legend item size
@@ -649,16 +650,17 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
+                margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
                 xaxis=dict(
-                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                    tickangle=-45 if len(strategy_data) > 5 else 0,  # Rotate labels if many categories
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
+                    tickangle=-60 if len(strategy_data) > 5 else 0,  # Steeper rotation for better readability
                     tickmode='auto',
                     nticks=8 if len(strategy_data) > 8 else len(strategy_data),  # Fewer ticks to prevent overlap
                     tickwidth=3,  # Thicker tick marks
                     showgrid=True,
                     gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)'
+                    gridcolor='rgba(255,255,255,0.1)',
+                    automargin=True,  # Automatically adjust margins to fit labels
                 ),
                 yaxis=dict(
                     tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
@@ -686,7 +688,7 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=40, r=40, t=50, b=40),
+                margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
                 legend=dict(
                     font=dict(size=12, color='#F3F6FB'),
                     itemsizing='constant',  # Consistent legend item size
@@ -721,14 +723,17 @@ def create_dashboard(df):
                 st.error(f"Column '{main_characteristic_column}' not found in the data. Please select a valid column.")
                 return
                 
+            # Create a copy to avoid SettingWithCopyWarning
+            valid_df = filtered_df.copy()
+            
             # Convert main characteristic column to string to avoid type issues
-            filtered_df[main_characteristic_column] = filtered_df[main_characteristic_column].astype(str)
+            valid_df[main_characteristic_column] = valid_df[main_characteristic_column].fillna('Unknown').astype(str)
             
-            # Ensure NAV column is numeric
-            filtered_df[nav_column] = pd.to_numeric(filtered_df[nav_column], errors='coerce')
+            # Ensure NAV column is numeric - force conversion and handle errors
+            valid_df[nav_column] = pd.to_numeric(valid_df[nav_column], errors='coerce')
             
-            # Drop rows with missing values in key columns
-            valid_df = filtered_df.dropna(subset=[main_characteristic_column, nav_column])
+            # Drop rows with missing values in key columns after conversion
+            valid_df = valid_df.dropna(subset=[main_characteristic_column, nav_column])
             
             if valid_df.empty:
                 st.warning("No valid data available for analysis after filtering out missing values.")
@@ -762,16 +767,17 @@ def create_dashboard(df):
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
                     font=dict(color='#F3F6FB', size=14),  # Increase font size
-                    margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
+                    margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
                     xaxis=dict(
-                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                        tickangle=-45 if len(char_data) > 5 else 0,  # Rotate labels if many categories
+                        tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
+                        tickangle=-60 if len(char_data) > 5 else 0,  # Steeper rotation for better readability
                         tickmode='auto',
                         nticks=8 if len(char_data) > 8 else len(char_data),  # Fewer ticks to prevent overlap
                         tickwidth=3,  # Thicker tick marks
                         showgrid=True,
                         gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)'
+                        gridcolor='rgba(255,255,255,0.1)',
+                        automargin=True,  # Automatically adjust margins to fit labels
                     ),
                     yaxis=dict(
                         tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
@@ -799,7 +805,7 @@ def create_dashboard(df):
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
                     font=dict(color='#F3F6FB', size=14),  # Increase font size
-                    margin=dict(l=40, r=40, t=50, b=40),
+                    margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
                     legend=dict(
                         font=dict(size=12, color='#F3F6FB'),
                         itemsizing='constant',  # Consistent legend item size
@@ -818,13 +824,32 @@ def create_dashboard(df):
             
             # Merge NAV and count data
             try:
-                merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
+                # Ensure data is properly prepared for merging
+                char_data_clean = char_data.copy()
+                char_count_clean = char_count.copy()
                 
-                # Ensure both columns are numeric before division
+                # Convert column types explicitly to ensure compatibility
+                char_data_clean[main_characteristic_column] = char_data_clean[main_characteristic_column].astype(str)
+                char_count_clean[main_characteristic_column] = char_count_clean[main_characteristic_column].astype(str)
+                
+                # Ensure NAV column is numeric
+                char_data_clean[nav_column] = pd.to_numeric(char_data_clean[nav_column], errors='coerce')
+                
+                # Perform the merge with clean data
+                merged_data = pd.merge(char_data_clean, char_count_clean, on=main_characteristic_column, how='inner')
+                
+                # Double check numeric columns after merge
                 merged_data[nav_column] = pd.to_numeric(merged_data[nav_column], errors='coerce')
                 merged_data['Count'] = pd.to_numeric(merged_data['Count'], errors='coerce')
                 
-                # Handle division by zero and NaN values
+                # Remove any rows with NaN values that would cause calculation errors
+                merged_data = merged_data.dropna(subset=[nav_column, 'Count'])
+                
+                if merged_data.empty:
+                    st.warning("No valid data available for table calculations after cleaning.")
+                    return
+                
+                # Calculate average NAV with safe division
                 merged_data['Average NAV'] = merged_data.apply(
                     lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
                     axis=1
@@ -1163,20 +1188,21 @@ def create_dashboard(df):
                 )
                 # Improve axis tick labels for better readability
                 fig_bar.update_layout(
-                    height=400,
+                    height=500,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
                     font=dict(color='#F3F6FB', size=14),
-                    margin=dict(l=40, r=40, t=50, b=80),  # Increase bottom margin for labels
+                    margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
                     xaxis=dict(
-                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                        tickangle=-45 if len(analysis["data"]) > 5 else 0,  # Rotate labels if many categories
+                        tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
+                        tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Steeper rotation for better readability
                         tickmode='auto',
                         nticks=8 if len(analysis["data"]) > 8 else len(analysis["data"]),  # Fewer ticks to prevent overlap
                         tickwidth=3,  # Thicker tick marks
                         showgrid=True,
                         gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)'
+                        gridcolor='rgba(255,255,255,0.1)',
+                        automargin=True,  # Automatically adjust margins to fit labels
                     ),
                     yaxis=dict(
                         tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
@@ -1218,14 +1244,14 @@ def create_dashboard(df):
                 
                 # Improve pie chart formatting
                 fig_pie.update_layout(
-                    height=400,
+                    height=500,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
                     font=dict(color='#F3F6FB', size=14),
-                    margin=dict(l=40, r=40, t=50, b=40),
+                    margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
                     legend=dict(
-                        font=dict(size=12, color='#F3F6FB'),
-                        itemsizing='constant',
+                        font=dict(size=14, color='#F3F6FB'),  # Larger font for legend
+                        itemsizing='constant',  # Consistent legend item size
                         yanchor="top",
                         y=0.99,
                         xanchor="left",
