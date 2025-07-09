@@ -553,32 +553,12 @@ def create_dashboard(df):
                 color=geography_column,
                 color_discrete_sequence=PROFESSIONAL_COLORS
             )
-            # Improve axis tick labels for better readability
             fig_geo_bar.update_layout(
                 height=500,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
-                font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
-                xaxis=dict(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
-                    tickangle=-60 if len(geo_data) > 5 else 0,  # Steeper rotation for better readability
-                    tickmode='auto',
-                    nticks=8 if len(geo_data) > 8 else len(geo_data),  # Fewer ticks to prevent overlap
-                    tickwidth=3,  # Thicker tick marks
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)',
-                    automargin=True,  # Automatically adjust margins to fit labels
-                ),
-                yaxis=dict(
-                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                    tickwidth=3,  # Thicker tick marks
-                    tickformat='.2s',  # Format large numbers (M for millions, etc.)
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)'
-                )
+                font=dict(color='#F3F6FB'),
+                margin=dict(l=40, r=40, t=50, b=40)
             )
             st.plotly_chart(fig_geo_bar, use_container_width=True)
         
@@ -596,19 +576,9 @@ def create_dashboard(df):
                 height=500,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
-                font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
-                legend=dict(
-                    font=dict(size=12, color='#F3F6FB'),
-                    itemsizing='constant',  # Consistent legend item size
-                    yanchor="top",
-                    y=0.99,
-                    xanchor="left",
-                    x=0.01
-                )
+                font=dict(color='#F3F6FB'),
+                margin=dict(l=40, r=40, t=50, b=40)
             )
-            # Improve text labels on pie chart
-            fig_geo_pie.update_traces(textfont=dict(size=14, color='#F3F6FB'))
             st.plotly_chart(fig_geo_pie, use_container_width=True)
         
         # Geography insights
@@ -644,32 +614,12 @@ def create_dashboard(df):
                 color=strategy_column,
                 color_discrete_sequence=PROFESSIONAL_COLORS
             )
-            # Improve axis tick labels for better readability
             fig_strategy_bar.update_layout(
                 height=500,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
-                font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
-                xaxis=dict(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
-                    tickangle=-60 if len(strategy_data) > 5 else 0,  # Steeper rotation for better readability
-                    tickmode='auto',
-                    nticks=8 if len(strategy_data) > 8 else len(strategy_data),  # Fewer ticks to prevent overlap
-                    tickwidth=3,  # Thicker tick marks
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)',
-                    automargin=True,  # Automatically adjust margins to fit labels
-                ),
-                yaxis=dict(
-                    tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                    tickwidth=3,  # Thicker tick marks
-                    tickformat='.2s',  # Format large numbers (M for millions, etc.)
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='rgba(255,255,255,0.1)'
-                )
+                font=dict(color='#F3F6FB'),
+                margin=dict(l=40, r=40, t=50, b=40)
             )
             st.plotly_chart(fig_strategy_bar, use_container_width=True)
         
@@ -687,19 +637,9 @@ def create_dashboard(df):
                 height=500,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
-                font=dict(color='#F3F6FB', size=14),  # Increase font size
-                margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
-                legend=dict(
-                    font=dict(size=12, color='#F3F6FB'),
-                    itemsizing='constant',  # Consistent legend item size
-                    yanchor="top",
-                    y=0.99,
-                    xanchor="left",
-                    x=0.01
-                )
+                font=dict(color='#F3F6FB'),
+                margin=dict(l=40, r=40, t=50, b=40)
             )
-            # Improve text labels on pie chart
-            fig_strategy_pie.update_traces(textfont=dict(size=14, color='#F3F6FB'))
             st.plotly_chart(fig_strategy_pie, use_container_width=True)
         
         # Strategy insights
@@ -718,33 +658,12 @@ def create_dashboard(df):
         st.markdown('<div class="sub-header">NAV Distribution by Main Characteristic</div>', unsafe_allow_html=True)
         
         try:
-            # Ensure main characteristic column contains valid string values
-            if main_characteristic_column not in filtered_df.columns:
-                st.error(f"Column '{main_characteristic_column}' not found in the data. Please select a valid column.")
-                return
-                
-            # Create a copy to avoid SettingWithCopyWarning
-            valid_df = filtered_df.copy()
-            
-            # Convert main characteristic column to string to avoid type issues
-            valid_df[main_characteristic_column] = valid_df[main_characteristic_column].fillna('Unknown').astype(str)
-            
-            # Ensure NAV column is numeric - force conversion and handle errors
-            valid_df[nav_column] = pd.to_numeric(valid_df[nav_column], errors='coerce')
-            
-            # Drop rows with missing values in key columns after conversion
-            valid_df = valid_df.dropna(subset=[main_characteristic_column, nav_column])
-            
-            if valid_df.empty:
-                st.warning("No valid data available for analysis after filtering out missing values.")
-                return
-                
             # Group by main characteristic
-            char_data = valid_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
+            char_data = filtered_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
             char_data = char_data.sort_values(by=nav_column, ascending=False)
             
             # Count investments per characteristic
-            char_count = valid_df.groupby(main_characteristic_column).size().reset_index(name='Count')
+            char_count = filtered_df.groupby(main_characteristic_column).size().reset_index(name='Count')
             char_count = char_count.sort_values(by='Count', ascending=False)
             
             # Create charts
@@ -761,32 +680,12 @@ def create_dashboard(df):
                     color=main_characteristic_column,
                     color_discrete_sequence=PROFESSIONAL_COLORS
                 )
-                # Improve axis tick labels for better readability
                 fig_char_bar.update_layout(
                     height=500,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
-                    font=dict(color='#F3F6FB', size=14),  # Increase font size
-                    margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
-                    xaxis=dict(
-                        tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
-                        tickangle=-60 if len(char_data) > 5 else 0,  # Steeper rotation for better readability
-                        tickmode='auto',
-                        nticks=8 if len(char_data) > 8 else len(char_data),  # Fewer ticks to prevent overlap
-                        tickwidth=3,  # Thicker tick marks
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)',
-                        automargin=True,  # Automatically adjust margins to fit labels
-                    ),
-                    yaxis=dict(
-                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                        tickwidth=3,  # Thicker tick marks
-                        tickformat='.2s',  # Format large numbers (M for millions, etc.)
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)'
-                    )
+                    font=dict(color='#F3F6FB'),
+                    margin=dict(l=40, r=40, t=50, b=40)
                 )
                 st.plotly_chart(fig_char_bar, use_container_width=True)
             
@@ -804,71 +703,23 @@ def create_dashboard(df):
                     height=500,
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
-                    font=dict(color='#F3F6FB', size=14),  # Increase font size
-                    margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
-                    legend=dict(
-                        font=dict(size=12, color='#F3F6FB'),
-                        itemsizing='constant',  # Consistent legend item size
-                        yanchor="top",
-                        y=0.99,
-                        xanchor="left",
-                        x=0.01
-                    )
+                    font=dict(color='#F3F6FB'),
+                    margin=dict(l=40, r=40, t=50, b=40)
                 )
-                # Improve text labels on pie chart
-                fig_char_pie.update_traces(textfont=dict(size=14, color='#F3F6FB'))
                 st.plotly_chart(fig_char_pie, use_container_width=True)
             
             # Table showing count of investments per characteristic
             st.subheader("Number of Investments by Main Characteristic")
             
             # Merge NAV and count data
-            try:
-                # Ensure data is properly prepared for merging
-                char_data_clean = char_data.copy()
-                char_count_clean = char_count.copy()
-                
-                # Convert column types explicitly to ensure compatibility
-                char_data_clean[main_characteristic_column] = char_data_clean[main_characteristic_column].astype(str)
-                char_count_clean[main_characteristic_column] = char_count_clean[main_characteristic_column].astype(str)
-                
-                # Ensure NAV column is numeric
-                char_data_clean[nav_column] = pd.to_numeric(char_data_clean[nav_column], errors='coerce')
-                
-                # Perform the merge with clean data
-                merged_data = pd.merge(char_data_clean, char_count_clean, on=main_characteristic_column, how='inner')
-                
-                # Double check numeric columns after merge
-                merged_data[nav_column] = pd.to_numeric(merged_data[nav_column], errors='coerce')
-                merged_data['Count'] = pd.to_numeric(merged_data['Count'], errors='coerce')
-                
-                # Remove any rows with NaN values that would cause calculation errors
-                merged_data = merged_data.dropna(subset=[nav_column, 'Count'])
-                
-                if merged_data.empty:
-                    st.warning("No valid data available for table calculations after cleaning.")
-                    return
-                
-                # Calculate average NAV with safe division
-                merged_data['Average NAV'] = merged_data.apply(
-                    lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
-                    axis=1
-                )
-                merged_data = merged_data.sort_values(by=nav_column, ascending=False)
-                
-                # Format the table columns with error handling
-                merged_data['NAV (ILS)'] = merged_data[nav_column].apply(lambda x: format_number(x) if pd.notnull(x) else 'N/A')
-                merged_data['Average NAV (ILS)'] = merged_data['Average NAV'].apply(lambda x: format_number(x) if pd.notnull(x) else 'N/A')
-                
-                # Calculate percentage of total NAV with error handling
-                if total_nav > 0:
-                    merged_data['% of Total NAV'] = merged_data[nav_column].apply(lambda x: f"{(x / total_nav * 100):.1f}%" if pd.notnull(x) else 'N/A')
-                else:
-                    merged_data['% of Total NAV'] = 'N/A'
-            except Exception as e:
-                st.error(f"Error calculating table data: {str(e)}")
-                st.info("Please check that your data contains valid numeric values for NAV and count calculations.")
-                return
+            merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
+            merged_data['Average NAV'] = merged_data[nav_column] / merged_data['Count']
+            merged_data = merged_data.sort_values(by=nav_column, ascending=False)
+            
+            # Format the table columns
+            merged_data['NAV (ILS)'] = merged_data[nav_column].apply(lambda x: format_number(x))
+            merged_data['Average NAV (ILS)'] = merged_data['Average NAV'].apply(lambda x: format_number(x))
+            merged_data['% of Total NAV'] = (merged_data[nav_column] / total_nav * 100).apply(lambda x: f"{x:.1f}%")
             
             # Display the table
             display_cols = [main_characteristic_column, 'Count', 'NAV (ILS)', 'Average NAV (ILS)', '% of Total NAV']
@@ -1184,144 +1035,35 @@ def create_dashboard(df):
                     y=analysis["y"],
                     labels={analysis["y"]: "NAV (ILS)", analysis["x"]: analysis["x"].replace("_", " ")},
                     color=analysis["color"],
-                    color_discrete_sequence=PROFESSIONAL_COLORS
+                    color_discrete_sequence=px.colors.qualitative.Pastel
                 )
-                # Improve axis tick labels for better readability
-                fig_bar.update_layout(
-                    height=500,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(40,45,60,0.8)',
-                    font=dict(color='#F3F6FB', size=14),
-                    margin=dict(l=50, r=50, t=70, b=120),  # Significantly increase margins for better spacing
-                    xaxis=dict(
-                        tickfont=dict(size=16, color='#F3F6FB', family='Arial Bold'),  # Even larger, bolder font
-                        tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Steeper rotation for better readability
-                        tickmode='auto',
-                        nticks=8 if len(analysis["data"]) > 8 else len(analysis["data"]),  # Fewer ticks to prevent overlap
-                        tickwidth=3,  # Thicker tick marks
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)',
-                        automargin=True,  # Automatically adjust margins to fit labels
-                    ),
-                    yaxis=dict(
-                        tickfont=dict(size=14, color='#F3F6FB', family='Arial Bold'),  # Larger, bolder font
-                        tickwidth=3,  # Thicker tick marks
-                        tickformat='.2s',  # Format large numbers (M for millions, etc.)
-                        showgrid=True,
-                        gridwidth=1,
-                        gridcolor='rgba(255,255,255,0.1)'
-                    )
-                )
+                fig_bar.update_layout(height=400)
                 st.plotly_chart(fig_bar, use_container_width=True)
             
             with col2:
-                # Prepare data for pie chart - show only top 5 categories and group the rest as "Other"
-                pie_data = analysis["data"].copy()
-                
-                if len(pie_data) > 5:
-                    # Sort by value descending
-                    pie_data = pie_data.sort_values(by=analysis["y"], ascending=False)
-                    
-                    # Get top 5 categories
-                    top_categories = pie_data.head(5)
-                    
-                    # Sum the rest as "Other"
-                    other_sum = pie_data.iloc[5:][analysis["y"]].sum()
-                    other_row = pd.DataFrame({analysis["x"]: ["Other"], analysis["y"]: [other_sum]})
-                    
-                    # Combine top categories with "Other"
-                    pie_data = pd.concat([top_categories, other_row])
-                
-                # Pie chart with simplified categories
+                # Pie chart
                 fig_pie = px.pie(
-                    pie_data,
+                    analysis["data"],
                     values=analysis["y"],
                     names=analysis["x"],
                     hole=0.4,
-                    color_discrete_sequence=PROFESSIONAL_COLORS
+                    color_discrete_sequence=px.colors.qualitative.Pastel
                 )
-                
-                # Improve pie chart formatting
-                fig_pie.update_layout(
-                    height=500,
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    plot_bgcolor='rgba(40,45,60,0.8)',
-                    font=dict(color='#F3F6FB', size=14),
-                    margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
-                    legend=dict(
-                        font=dict(size=14, color='#F3F6FB'),  # Larger font for legend
-                        itemsizing='constant',  # Consistent legend item size
-                        yanchor="top",
-                        y=0.99,
-                        xanchor="left",
-                        x=0.01
-                    )
-                )
-                
-                # Improve text labels on pie chart
-                fig_pie.update_traces(textfont=dict(size=14, color='#F3F6FB'))
-                
+                fig_pie.update_layout(height=400)
                 st.plotly_chart(fig_pie, use_container_width=True)
             
-            # Add insights for all analysis types
+            # Add insights
             if analysis["title"] == "Israel vs. International Exposure":
                 israel_nav = analysis["data"][analysis["data"]["Israel_Flag"] == "Israel"][nav_column].sum()
                 israel_pct = (israel_nav / total_nav) * 100
                 
                 st.markdown(f"""
                 <div class="insight-box">
-                    <h3>Israel Exposure Insight</h3>
-                    <p>Israeli investments represent <b>{israel_pct:.1f}%</b> of the total portfolio NAV.</p>
-                    <p>This {"high" if israel_pct > 50 else "balanced" if israel_pct > 30 else "low"} exposure to Israeli investments indicates a {"strong focus on local markets" if israel_pct > 50 else "balanced approach between local and international markets" if israel_pct > 30 else "diversified international strategy"}.</p>
+                    <h3>Israel vs. International Insight</h3>
+                    <p>Israeli investments represent <b>{israel_pct:.1f}%</b> of the total NAV.</p>
+                    <p>This {israel_pct > 50 and 'high' or 'low'} concentration in the Israeli market may reflect {israel_pct > 50 and 'a strategic focus on the local market' or 'a diversification strategy beyond the local market'}.</p>
                 </div>
                 """, unsafe_allow_html=True)
-            elif "NAV by" in analysis["title"]:
-                # For currency, valuation agent, or other NAV breakdowns
-                top_category = analysis["data"].iloc[0][analysis["x"]] if not analysis["data"].empty else "N/A"
-                top_value = analysis["data"].iloc[0][analysis["y"]] if not analysis["data"].empty else 0
-                top_pct = (top_value / total_nav) * 100 if total_nav > 0 else 0
-                category_count = len(analysis["data"])
-                
-                st.markdown(f"""
-                <div class="insight-box">
-                    <h3>Key {analysis["x"].replace('_', ' ')} Insights</h3>
-                    <p>The dominant {analysis["x"].replace('_', ' ')} is <b>{top_category}</b>, accounting for <b>{top_pct:.1f}%</b> of the total NAV.</p>
-                    <p>There are <b>{category_count}</b> different {analysis["x"].replace('_', ' ')}s in the portfolio, indicating {"high diversity" if category_count > 5 else "moderate diversity" if category_count > 2 else "low diversity"}.</p>
-                    <p>The distribution shows {"a concentrated allocation" if top_pct > 50 else "a balanced allocation" if top_pct > 30 else "a well-diversified allocation"} across different {analysis["x"].replace('_', ' ')}s.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif "Investment Year" in analysis["title"]:
-                # For year-based analysis
-                recent_years = analysis["data"].sort_values(by="Investment_Year", ascending=False).head(3)
-                recent_nav = recent_years[nav_column].sum()
-                recent_pct = (recent_nav / total_nav) * 100 if total_nav > 0 else 0
-                year_range = analysis["data"]["Investment_Year"].max() - analysis["data"]["Investment_Year"].min() if not analysis["data"].empty else 0
-                
-                st.markdown(f"""
-                <div class="insight-box">
-                    <h3>Investment Timeline Insights</h3>
-                    <p>The portfolio spans <b>{year_range}</b> years of investment activity.</p>
-                    <p>The most recent 3 years account for <b>{recent_pct:.1f}%</b> of the total NAV, indicating {"a strong focus on recent investments" if recent_pct > 60 else "a balanced mix of recent and established investments" if recent_pct > 40 else "a portfolio weighted toward established investments"}.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            elif "Top 10" in analysis["title"]:
-                # For GP or other top 10 analysis
-                top_entity = analysis["data"].iloc[0][analysis["x"]] if not analysis["data"].empty else "N/A"
-                top_value = analysis["data"].iloc[0][analysis["y"]] if not analysis["data"].empty else 0
-                top_pct = (top_value / total_nav) * 100 if total_nav > 0 else 0
-                top3_value = analysis["data"].head(3)[nav_column].sum() if len(analysis["data"]) >= 3 else top_value
-                top3_pct = (top3_value / total_nav) * 100 if total_nav > 0 else 0
-                
-                st.markdown(f"""
-                <div class="insight-box">
-                    <h3>Top {analysis["x"].replace('_', ' ')} Insights</h3>
-                    <p>The leading {analysis["x"].replace('_', ' ')} is <b>{top_entity}</b>, representing <b>{top_pct:.1f}%</b> of the total NAV.</p>
-                    <p>The top 3 {analysis["x"].replace('_', ' ')}s account for <b>{top3_pct:.1f}%</b> of the portfolio, indicating {"high concentration" if top3_pct > 60 else "moderate concentration" if top3_pct > 40 else "good diversification"}.</p>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            # The insights are now handled in the comprehensive section above
         
         # Overall portfolio insights
         st.subheader("Portfolio Overview Insights")
