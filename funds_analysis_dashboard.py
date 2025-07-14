@@ -561,28 +561,32 @@ def create_dashboard(df):
                 margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
             )
             
-            # Apply consistent tick styling as requested
-            fig_geo_bar.update_xaxes(
-                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=3,  # Thicker tick marks
-                ticklen=10,
-                ticks='outside',
-                linewidth=3,  # Thicker axis line
-                linecolor='#F3F6FB',  # Visible axis line color
-                tickangle=-60 if len(geo_data) > 5 else 0,  # Rotation for better readability
-                automargin=True  # Automatically adjust margins to fit labels
-            )
-            
-            fig_geo_bar.update_yaxes(
-                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=3,  # Thicker tick marks
-                ticklen=10,
-                ticks='outside',
-                linewidth=3,  # Thicker axis line
-                linecolor='#F3F6FB',  # Visible axis line color
-                tickformat='.2s'  # Format large numbers (M for millions, etc.)
-            )
-            st.plotly_chart(fig_geo_bar, use_container_width=True)
+            # Only plot if geo_data is not empty
+            if geo_data.empty:
+                st.info('No data available for Geography Analysis.')
+            else:
+                # Apply consistent tick styling as requested
+                fig_geo_bar.update_xaxes(
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                    tickwidth=3,  # Thicker tick marks
+                    ticklen=16,   # Longer tick marks
+                    ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
+                    tickangle=-60 if len(geo_data) > 5 else 0,  # Rotation for better readability
+                    automargin=True  # Automatically adjust margins to fit labels
+                )
+                
+                fig_geo_bar.update_yaxes(
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                    tickwidth=3,  # Thicker tick marks
+                    ticklen=16,   # Longer tick marks
+                    ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
+                    tickformat='.2s'  # Format large numbers (M for millions, etc.)
+                )
+                st.plotly_chart(fig_geo_bar, use_container_width=True)
         
         with col2:
             # Pie chart
@@ -644,28 +648,32 @@ def create_dashboard(df):
                 margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
             )
             
-            # Apply consistent tick styling as requested
-            fig_strategy_bar.update_xaxes(
-                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=3,  # Thicker tick marks
-                ticklen=10,
-                ticks='outside',
-                linewidth=3,  # Thicker axis line
-                linecolor='#F3F6FB',  # Visible axis line color
-                tickangle=-60 if len(strategy_data) > 5 else 0,  # Rotation for better readability
-                automargin=True  # Automatically adjust margins to fit labels
-            )
-            
-            fig_strategy_bar.update_yaxes(
-                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=3,  # Thicker tick marks
-                ticklen=10,
-                ticks='outside',
-                linewidth=3,  # Thicker axis line
-                linecolor='#F3F6FB',  # Visible axis line color
-                tickformat='.2s'  # Format large numbers (M for millions, etc.)
-            )
-            st.plotly_chart(fig_strategy_bar, use_container_width=True)
+            # Only plot if strategy_data is not empty
+            if strategy_data.empty:
+                st.info('No data available for Strategy Analysis.')
+            else:
+                # Apply consistent tick styling as requested
+                fig_strategy_bar.update_xaxes(
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                    tickwidth=3,  # Thicker tick marks
+                    ticklen=16,   # Longer tick marks
+                    ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
+                    tickangle=-60 if len(strategy_data) > 5 else 0,  # Rotation for better readability
+                    automargin=True  # Automatically adjust margins to fit labels
+                )
+                
+                fig_strategy_bar.update_yaxes(
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                    tickwidth=3,  # Thicker tick marks
+                    ticklen=16,   # Longer tick marks
+                    ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
+                    tickformat='.2s'  # Format large numbers (M for millions, etc.)
+                )
+                st.plotly_chart(fig_strategy_bar, use_container_width=True)
         
         with col2:
             # Pie chart
@@ -740,15 +748,17 @@ def create_dashboard(df):
                 st.write(f"char_data sample:\n{char_data.head()}")
                 st.write(f"char_count sample:\n{char_count.head()}")
             
-            # Create charts
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                # Bar chart for NAV
-                fig_char_bar = px.bar(
-                    char_data,
-                    x=main_characteristic_column,
-                    y=nav_column,
+            # Only plot if char_data is not empty
+            if char_data.empty:
+                st.info('No data available for Main Characteristic Analysis.')
+            else:
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Bar chart for NAV
+                    fig_char_bar = px.bar(
+                        char_data,
+                        x=main_characteristic_column,
+                        y=nav_column,
                     title=f"NAV by {main_characteristic_column}",
                     labels={nav_column: "NAV (ILS)", main_characteristic_column: "Main Characteristic"},
                     color=main_characteristic_column,
@@ -764,9 +774,9 @@ def create_dashboard(df):
                 
                 # Apply consistent tick styling as requested
                 fig_char_bar.update_xaxes(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
                     tickwidth=3,  # Thicker tick marks
-                    ticklen=10,
+                    ticklen=16,   # Longer tick marks
                     ticks='outside',
                     linewidth=3,  # Thicker axis line
                     linecolor='#F3F6FB',  # Visible axis line color
@@ -775,9 +785,9 @@ def create_dashboard(df):
                 )
                 
                 fig_char_bar.update_yaxes(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
                     tickwidth=3,  # Thicker tick marks
-                    ticklen=10,
+                    ticklen=16,   # Longer tick marks
                     ticks='outside',
                     linewidth=3,  # Thicker axis line
                     linecolor='#F3F6FB',  # Visible axis line color
@@ -1184,29 +1194,32 @@ def create_dashboard(df):
                     margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
                 )
                 
-                # Apply consistent tick styling as requested
-                fig_bar.update_xaxes(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=3,  # Thicker tick marks
-                    ticklen=10,
-                    ticks='outside',
-                    linewidth=3,  # Thicker axis line
-                    linecolor='#F3F6FB',  # Visible axis line color
-                    tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Rotation for better readability
-                    automargin=True  # Automatically adjust margins to fit labels
-                )
-                
-                fig_bar.update_yaxes(
-                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=3,  # Thicker tick marks
-                    ticklen=10,
-                    ticks='outside',
-                    linewidth=3,  # Thicker axis line
-                    linecolor='#F3F6FB',  # Visible axis line color
-                    tickformat='.2s'  # Format large numbers (M for millions, etc.)
-                )
-                
-                st.plotly_chart(fig_bar, use_container_width=True)
+                # Only plot if analysis['data'] is not empty
+                if analysis['data'].empty:
+                    st.info(f"No data available for {analysis['title']}.")
+                else:
+                    # Apply consistent tick styling as requested
+                    fig_bar.update_xaxes(
+                        tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                        tickwidth=3,  # Thicker tick marks
+                        ticklen=16,   # Longer tick marks
+                        ticks='outside',
+                        linewidth=3,  # Thicker axis line
+                        linecolor='#F3F6FB',  # Visible axis line color
+                        tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Rotation for better readability
+                        automargin=True  # Automatically adjust margins to fit labels
+                    )
+                    
+                    fig_bar.update_yaxes(
+                        tickfont=dict(size=18, color='#F3F6FB', family='Arial'),
+                        tickwidth=3,  # Thicker tick marks
+                        ticklen=16,   # Longer tick marks
+                        ticks='outside',
+                        linewidth=3,  # Thicker axis line
+                        linecolor='#F3F6FB',  # Visible axis line color
+                        tickformat='.2s'  # Format large numbers (M for millions, etc.)
+                    )
+                    st.plotly_chart(fig_bar, use_container_width=True)
             
             with col2:
                 # Pie chart
