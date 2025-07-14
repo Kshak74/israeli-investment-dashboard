@@ -558,7 +558,25 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB'),
-                margin=dict(l=40, r=40, t=50, b=40)
+                margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
+            )
+            
+            # Apply consistent tick styling as requested
+            fig_geo_bar.update_xaxes(
+                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                tickwidth=2,
+                ticklen=10,
+                ticks='outside',
+                tickangle=-60 if len(geo_data) > 5 else 0,  # Rotation for better readability
+                automargin=True  # Automatically adjust margins to fit labels
+            )
+            
+            fig_geo_bar.update_yaxes(
+                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                tickwidth=2,
+                ticklen=10,
+                ticks='outside',
+                tickformat='.2s'  # Format large numbers (M for millions, etc.)
             )
             st.plotly_chart(fig_geo_bar, use_container_width=True)
         
@@ -619,7 +637,25 @@ def create_dashboard(df):
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(40,45,60,0.8)',
                 font=dict(color='#F3F6FB'),
-                margin=dict(l=40, r=40, t=50, b=40)
+                margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
+            )
+            
+            # Apply consistent tick styling as requested
+            fig_strategy_bar.update_xaxes(
+                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                tickwidth=2,
+                ticklen=10,
+                ticks='outside',
+                tickangle=-60 if len(strategy_data) > 5 else 0,  # Rotation for better readability
+                automargin=True  # Automatically adjust margins to fit labels
+            )
+            
+            fig_strategy_bar.update_yaxes(
+                tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                tickwidth=2,
+                ticklen=10,
+                ticks='outside',
+                tickformat='.2s'  # Format large numbers (M for millions, etc.)
             )
             st.plotly_chart(fig_strategy_bar, use_container_width=True)
         
@@ -658,12 +694,24 @@ def create_dashboard(df):
         st.markdown('<div class="sub-header">NAV Distribution by Main Characteristic</div>', unsafe_allow_html=True)
         
         try:
-            # Group by main characteristic
-            char_data = filtered_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
+            # Create a clean copy of the dataframe for calculations
+            calc_df = filtered_df.copy()
+            
+            # Ensure main characteristic column is string type to avoid groupby errors
+            calc_df[main_characteristic_column] = calc_df[main_characteristic_column].astype(str).fillna('Unknown')
+            
+            # Ensure NAV column is numeric for calculations
+            calc_df[nav_column] = pd.to_numeric(calc_df[nav_column], errors='coerce')
+            
+            # Drop rows with NaN values after conversion to avoid calculation errors
+            calc_df = calc_df.dropna(subset=[nav_column])
+            
+            # Group by main characteristic with proper type handling
+            char_data = calc_df.groupby(main_characteristic_column)[nav_column].sum().reset_index()
             char_data = char_data.sort_values(by=nav_column, ascending=False)
             
             # Count investments per characteristic
-            char_count = filtered_df.groupby(main_characteristic_column).size().reset_index(name='Count')
+            char_count = calc_df.groupby(main_characteristic_column).size().reset_index(name='Count')
             char_count = char_count.sort_values(by='Count', ascending=False)
             
             # Create charts
@@ -685,7 +733,25 @@ def create_dashboard(df):
                     paper_bgcolor='rgba(0,0,0,0)',
                     plot_bgcolor='rgba(40,45,60,0.8)',
                     font=dict(color='#F3F6FB'),
-                    margin=dict(l=40, r=40, t=50, b=40)
+                    margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
+                )
+                
+                # Apply consistent tick styling as requested
+                fig_char_bar.update_xaxes(
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickwidth=2,
+                    ticklen=10,
+                    ticks='outside',
+                    tickangle=-60 if len(char_data) > 5 else 0,  # Rotation for better readability
+                    automargin=True  # Automatically adjust margins to fit labels
+                )
+                
+                fig_char_bar.update_yaxes(
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickwidth=2,
+                    ticklen=10,
+                    ticks='outside',
+                    tickformat='.2s'  # Format large numbers (M for millions, etc.)
                 )
                 st.plotly_chart(fig_char_bar, use_container_width=True)
             
@@ -711,15 +777,30 @@ def create_dashboard(df):
             # Table showing count of investments per characteristic
             st.subheader("Number of Investments by Main Characteristic")
             
-            # Merge NAV and count data
+            # Merge NAV and count data with proper type handling
             merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
-            merged_data['Average NAV'] = merged_data[nav_column] / merged_data['Count']
+            
+            # Ensure all columns used in calculations are numeric
+            merged_data[nav_column] = pd.to_numeric(merged_data[nav_column], errors='coerce')
+            merged_data['Count'] = pd.to_numeric(merged_data['Count'], errors='coerce')
+            
+            # Safe division with error handling
+            merged_data['Average NAV'] = merged_data.apply(
+                lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
+                axis=1
+            )
+            
             merged_data = merged_data.sort_values(by=nav_column, ascending=False)
             
             # Format the table columns
             merged_data['NAV (ILS)'] = merged_data[nav_column].apply(lambda x: format_number(x))
             merged_data['Average NAV (ILS)'] = merged_data['Average NAV'].apply(lambda x: format_number(x))
-            merged_data['% of Total NAV'] = (merged_data[nav_column] / total_nav * 100).apply(lambda x: f"{x:.1f}%")
+            
+            # Safe percentage calculation
+            if total_nav > 0:
+                merged_data['% of Total NAV'] = (merged_data[nav_column] / total_nav * 100).apply(lambda x: f"{x:.1f}%")
+            else:
+                merged_data['% of Total NAV'] = merged_data[nav_column].apply(lambda x: "0.0%")
             
             # Display the table
             display_cols = [main_characteristic_column, 'Count', 'NAV (ILS)', 'Average NAV (ILS)', '% of Total NAV']
@@ -1035,9 +1116,36 @@ def create_dashboard(df):
                     y=analysis["y"],
                     labels={analysis["y"]: "NAV (ILS)", analysis["x"]: analysis["x"].replace("_", " ")},
                     color=analysis["color"],
-                    color_discrete_sequence=px.colors.qualitative.Pastel
+                    color_discrete_sequence=PROFESSIONAL_COLORS  # Use consistent color palette
                 )
-                fig_bar.update_layout(height=400)
+                
+                # Apply consistent layout settings
+                fig_bar.update_layout(
+                    height=500,  # Increased height
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(40,45,60,0.8)',
+                    font=dict(color='#F3F6FB'),
+                    margin=dict(l=50, r=50, t=70, b=120)  # Increased margins for better spacing
+                )
+                
+                # Apply consistent tick styling as requested
+                fig_bar.update_xaxes(
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickwidth=2,
+                    ticklen=10,
+                    ticks='outside',
+                    tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Rotation for better readability
+                    automargin=True  # Automatically adjust margins to fit labels
+                )
+                
+                fig_bar.update_yaxes(
+                    tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
+                    tickwidth=2,
+                    ticklen=10,
+                    ticks='outside',
+                    tickformat='.2s'  # Format large numbers (M for millions, etc.)
+                )
+                
                 st.plotly_chart(fig_bar, use_container_width=True)
             
             with col2:
@@ -1047,9 +1155,29 @@ def create_dashboard(df):
                     values=analysis["y"],
                     names=analysis["x"],
                     hole=0.4,
-                    color_discrete_sequence=px.colors.qualitative.Pastel
+                    color_discrete_sequence=PROFESSIONAL_COLORS  # Use consistent color palette
                 )
-                fig_pie.update_layout(height=400)
+                
+                # Improve pie chart formatting
+                fig_pie.update_layout(
+                    height=500,
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(40,45,60,0.8)',
+                    font=dict(color='#F3F6FB', size=14),
+                    margin=dict(l=50, r=50, t=70, b=50),  # Increased margins for better spacing
+                    legend=dict(
+                        font=dict(size=14, color='#F3F6FB'),  # Larger font for legend
+                        itemsizing='constant',  # Consistent legend item size
+                        yanchor="top",
+                        y=0.99,
+                        xanchor="left",
+                        x=0.01
+                    )
+                )
+                
+                # Improve text labels on pie chart
+                fig_pie.update_traces(textfont=dict(size=14, color='#F3F6FB'))
+                
                 st.plotly_chart(fig_pie, use_container_width=True)
             
             # Add insights
