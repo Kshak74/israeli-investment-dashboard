@@ -564,18 +564,22 @@ def create_dashboard(df):
             # Apply consistent tick styling as requested
             fig_geo_bar.update_xaxes(
                 tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=2,
+                tickwidth=3,  # Thicker tick marks
                 ticklen=10,
                 ticks='outside',
+                linewidth=3,  # Thicker axis line
+                linecolor='#F3F6FB',  # Visible axis line color
                 tickangle=-60 if len(geo_data) > 5 else 0,  # Rotation for better readability
                 automargin=True  # Automatically adjust margins to fit labels
             )
             
             fig_geo_bar.update_yaxes(
                 tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=2,
+                tickwidth=3,  # Thicker tick marks
                 ticklen=10,
                 ticks='outside',
+                linewidth=3,  # Thicker axis line
+                linecolor='#F3F6FB',  # Visible axis line color
                 tickformat='.2s'  # Format large numbers (M for millions, etc.)
             )
             st.plotly_chart(fig_geo_bar, use_container_width=True)
@@ -643,18 +647,22 @@ def create_dashboard(df):
             # Apply consistent tick styling as requested
             fig_strategy_bar.update_xaxes(
                 tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=2,
+                tickwidth=3,  # Thicker tick marks
                 ticklen=10,
                 ticks='outside',
+                linewidth=3,  # Thicker axis line
+                linecolor='#F3F6FB',  # Visible axis line color
                 tickangle=-60 if len(strategy_data) > 5 else 0,  # Rotation for better readability
                 automargin=True  # Automatically adjust margins to fit labels
             )
             
             fig_strategy_bar.update_yaxes(
                 tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                tickwidth=2,
+                tickwidth=3,  # Thicker tick marks
                 ticklen=10,
                 ticks='outside',
+                linewidth=3,  # Thicker axis line
+                linecolor='#F3F6FB',  # Visible axis line color
                 tickformat='.2s'  # Format large numbers (M for millions, etc.)
             )
             st.plotly_chart(fig_strategy_bar, use_container_width=True)
@@ -697,11 +705,22 @@ def create_dashboard(df):
             # Create a clean copy of the dataframe for calculations
             calc_df = filtered_df.copy()
             
+            # Debug information - using st.write for debugging
+            with st.expander("Debug Information", expanded=False):
+                st.write(f"Original column types: {filtered_df.dtypes}")
+                st.write(f"Sample data before conversion:\n{filtered_df[[main_characteristic_column, nav_column]].head()}")
+            
             # Ensure main characteristic column is string type to avoid groupby errors
             calc_df[main_characteristic_column] = calc_df[main_characteristic_column].astype(str).fillna('Unknown')
             
             # Ensure NAV column is numeric for calculations
             calc_df[nav_column] = pd.to_numeric(calc_df[nav_column], errors='coerce')
+            
+            # Debug information after conversion
+            with st.expander("Debug Information (After Conversion)", expanded=False):
+                st.write(f"After conversion - NAV column type: {calc_df[nav_column].dtype}")
+                st.write(f"NAV column null values: {calc_df[nav_column].isna().sum()}")
+                st.write(f"Sample data after conversion:\n{calc_df[[main_characteristic_column, nav_column]].head()}")
             
             # Drop rows with NaN values after conversion to avoid calculation errors
             calc_df = calc_df.dropna(subset=[nav_column])
@@ -713,6 +732,13 @@ def create_dashboard(df):
             # Count investments per characteristic
             char_count = calc_df.groupby(main_characteristic_column).size().reset_index(name='Count')
             char_count = char_count.sort_values(by='Count', ascending=False)
+            
+            # Debug information for grouped data
+            with st.expander("Debug Information (Grouped Data)", expanded=False):
+                st.write(f"char_data types: {char_data.dtypes}")
+                st.write(f"char_count types: {char_count.dtypes}")
+                st.write(f"char_data sample:\n{char_data.head()}")
+                st.write(f"char_count sample:\n{char_count.head()}")
             
             # Create charts
             col1, col2 = st.columns(2)
@@ -739,18 +765,22 @@ def create_dashboard(df):
                 # Apply consistent tick styling as requested
                 fig_char_bar.update_xaxes(
                     tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=2,
+                    tickwidth=3,  # Thicker tick marks
                     ticklen=10,
                     ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
                     tickangle=-60 if len(char_data) > 5 else 0,  # Rotation for better readability
                     automargin=True  # Automatically adjust margins to fit labels
                 )
                 
                 fig_char_bar.update_yaxes(
                     tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=2,
+                    tickwidth=3,  # Thicker tick marks
                     ticklen=10,
                     ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
                     tickformat='.2s'  # Format large numbers (M for millions, etc.)
                 )
                 st.plotly_chart(fig_char_bar, use_container_width=True)
@@ -780,15 +810,41 @@ def create_dashboard(df):
             # Merge NAV and count data with proper type handling
             merged_data = pd.merge(char_data, char_count, on=main_characteristic_column)
             
+            # Debug merged data before calculations
+            with st.expander("Debug Information (Merged Data)", expanded=False):
+                st.write(f"Merged data types before conversion: {merged_data.dtypes}")
+                st.write(f"Merged data sample before conversion:\n{merged_data.head()}")
+            
             # Ensure all columns used in calculations are numeric
             merged_data[nav_column] = pd.to_numeric(merged_data[nav_column], errors='coerce')
             merged_data['Count'] = pd.to_numeric(merged_data['Count'], errors='coerce')
             
+            # Drop any rows with NaN values after conversion
+            merged_data = merged_data.dropna(subset=[nav_column, 'Count'])
+            
+            # Debug merged data after numeric conversion
+            with st.expander("Debug Information (After Numeric Conversion)", expanded=False):
+                st.write(f"Merged data types after conversion: {merged_data.dtypes}")
+                st.write(f"Merged data sample after conversion:\n{merged_data.head()}")
+                st.write(f"NAV column null values: {merged_data[nav_column].isna().sum()}")
+                st.write(f"Count column null values: {merged_data['Count'].isna().sum()}")
+            
             # Safe division with error handling
-            merged_data['Average NAV'] = merged_data.apply(
-                lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
-                axis=1
-            )
+            try:
+                merged_data['Average NAV'] = merged_data.apply(
+                    lambda row: row[nav_column] / row['Count'] if row['Count'] > 0 else 0, 
+                    axis=1
+                )
+            except Exception as e:
+                st.error(f"Error calculating Average NAV: {str(e)}")
+                # Fallback calculation if the apply method fails
+                merged_data['Average NAV'] = 0
+                for idx, row in merged_data.iterrows():
+                    try:
+                        if row['Count'] > 0:
+                            merged_data.at[idx, 'Average NAV'] = float(row[nav_column]) / float(row['Count'])
+                    except:
+                        merged_data.at[idx, 'Average NAV'] = 0
             
             merged_data = merged_data.sort_values(by=nav_column, ascending=False)
             
@@ -1131,18 +1187,22 @@ def create_dashboard(df):
                 # Apply consistent tick styling as requested
                 fig_bar.update_xaxes(
                     tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=2,
+                    tickwidth=3,  # Thicker tick marks
                     ticklen=10,
                     ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
                     tickangle=-60 if len(analysis["data"]) > 5 else 0,  # Rotation for better readability
                     automargin=True  # Automatically adjust margins to fit labels
                 )
                 
                 fig_bar.update_yaxes(
                     tickfont=dict(size=16, color='#F3F6FB', family='Arial'),
-                    tickwidth=2,
+                    tickwidth=3,  # Thicker tick marks
                     ticklen=10,
                     ticks='outside',
+                    linewidth=3,  # Thicker axis line
+                    linecolor='#F3F6FB',  # Visible axis line color
                     tickformat='.2s'  # Format large numbers (M for millions, etc.)
                 )
                 
