@@ -2,11 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import collections
-import numpy as np
 
 st.set_page_config(page_title="Quarterly Investment Analysis", page_icon="📊", layout="wide")
 
-# צבעים
 PROFESSIONAL_COLORS = [
     '#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087',
     '#f95d6a', '#ff7c43', '#ffa600', '#90be6d', '#43aa8b'
@@ -47,11 +45,27 @@ def ensure_unique_columns(df):
         df.columns = new_cols
     return df
 
+def normalize_columns(df):
+    col_map = {
+        'investment name': 'Investment Name',
+        'שם קרן השקעה': 'Investment Name',
+        'geography': 'Geography',
+        'מדינה לפי חשיפה כלכלית': 'Geography',
+        'strategy': 'Strategy',
+        'אסטרטגיה': 'Strategy',
+        'nav (ils)': 'NAV (ILS)',
+        "שווי הוגן (באלפי ש\"ח)": 'NAV (ILS)',
+        "שווי הוגן (באלפי ש''ח)": 'NAV (ILS)',
+        "nav (במטבע הדיווח של קרן ההשקעה)": "NAV (OC)",
+    }
+    df = df.rename(columns={c: col_map.get(c.strip().lower(), c) for c in df.columns})
+    return df
+
 def load_data(uploaded_file):
     try:
         df = pd.read_excel(uploaded_file, engine='openpyxl')
         df.columns = df.columns.astype(str).str.strip()
-        df.columns = [f'Column_{i}' if pd.isna(col) or col == '' else col for i, col in enumerate(df.columns)]
+        df = normalize_columns(df)
         df = ensure_unique_columns(df)
         df = df.dropna(how='all').dropna(axis=1, how='all')
         return df
@@ -60,14 +74,11 @@ def load_data(uploaded_file):
         return None
 
 def merge_quarters(dfs, period_names):
-    # הוספת עמודת רבעון/תקופה לכל קובץ
     for i, (df, pname) in enumerate(zip(dfs, period_names)):
         df['Period'] = pname
-    # התאמה לאותן עמודות
     common_cols = set(dfs[0].columns)
     for df in dfs[1:]:
         common_cols &= set(df.columns)
-    # מאחדים רק עמודות משותפות
     dfs_common = [df[list(common_cols) + ['Period']] for df in dfs]
     return pd.concat(dfs_common, ignore_index=True)
 
@@ -78,7 +89,6 @@ def create_dashboard(df):
     strat_col = 'Strategy'
     nav_col = 'NAV (ILS)'
 
-    # Filters
     period_options = sorted(df[period_col].dropna().astype(str).unique())
     selected_periods = st.sidebar.multiselect("Select Period(s)", period_options, period_options)
     geo_options = sorted(df[geo_col].dropna().unique())
@@ -137,11 +147,17 @@ def main():
     period_names = []
     dfs = []
 
+    REQUIRED_COLS = ['Investment Name', 'Geography', 'Strategy', 'NAV (ILS)']
+
     if uploaded_files:
         for upf in uploaded_files:
             df = load_data(upf)
             if df is not None:
-                # מצפה שיהיה עמודה 'Period' או 'רבעון' או 'שנה'. אם לא - שואל את המשתמש
+                missing = [col for col in REQUIRED_COLS if col not in df.columns]
+                if missing:
+                    st.warning(f"File {upf.name} missing columns: {missing}. Please rename or map columns in the Excel file.")
+                    continue
+                # בחירת עמודת תקופה (Period)
                 period_guess = None
                 for col in df.columns:
                     if "רבעון" in col or "שנה" in col or "period" in col.lower() or "date" in col.lower():
@@ -157,7 +173,6 @@ def main():
             create_dashboard(combined)
         else:
             st.info("Please upload at least two quarterly files for comparison.")
-
     else:
         st.info("Upload at least two Excel files (with columns: 'Investment Name', 'Geography', 'Strategy', 'NAV (ILS)', etc.)")
 
