@@ -3,14 +3,12 @@ import pandas as pd
 import plotly.express as px
 import collections
 
-# Page config
 st.set_page_config(
-    page_title="Investment Funds Analysis Dashboard",
+    page_title="Investment Funds Quarterly Analysis",
     page_icon="📊",
     layout="wide"
 )
 
-# D3 Colors
 PROFESSIONAL_COLORS = [
     '#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087',
     '#f95d6a', '#ff7c43', '#ffa600', '#90be6d', '#43aa8b'
@@ -90,7 +88,7 @@ def create_dashboard(df):
         st.warning("No data available. Please upload a file.")
         return
 
-    # Detect columns (try to use exact if exists, fallback to contains)
+    # Detect columns
     nav_col = detect_column(df, ['nav', 'שווי', 'value', 'amount', 'סכום', 'ערך'], must_numeric=True)
     geo_col = detect_column(df, ['geo', 'מדינה', 'country', 'אזור', 'region'], prefer_exact=['Geography', 'מדינה'])
     strat_col = detect_column(df, ['strategy', 'אסטרטגיה', 'type', 'סוג'], prefer_exact=['Strategy', 'אסטרטגיה'])
@@ -100,8 +98,13 @@ def create_dashboard(df):
     year_col = detect_column(df, ['year', 'שנה', 'date', 'תאריך'])
     gp_col = detect_column(df, ['gp', 'general partner', 'manager', 'מנהל'])
 
-    # Allow manual correction
-    st.sidebar.subheader("Column Selection (for correction)")
+    # Period/quarter detection
+    period_col = detect_column(df, ['רבעון', 'quarter', 'שנה', 'year', 'date', 'תאריך', 'period', 'תקופה'],
+                               prefer_exact=['רבעון', 'שנה', 'תקופה', 'Period', 'Date'])
+    period_col = st.sidebar.selectbox("Period/Quarter Column", [period_col]+[c for c in df.columns if c!=period_col], 0)
+
+    # Allow manual correction for other cols
+    st.sidebar.subheader("Column Selection")
     nav_col = st.sidebar.selectbox("NAV Column", [nav_col]+[c for c in df.columns if c!=nav_col], 0)
     geo_col = st.sidebar.selectbox("Geography Column", [geo_col]+[c for c in df.columns if c!=geo_col], 0)
     strat_col = st.sidebar.selectbox("Strategy Column", [strat_col]+[c for c in df.columns if c!=strat_col], 0)
@@ -109,14 +112,21 @@ def create_dashboard(df):
 
     # Filters
     st.sidebar.subheader("Filters")
+    # תקופות לסינון
+    period_options = sorted(df[period_col].dropna().astype(str).unique())
+    selected_periods = st.sidebar.multiselect("Select Period(s)", ['All']+period_options, ['All'])
+
     geo_options = sorted(df[geo_col].dropna().unique())
     strat_options = sorted(df[strat_col].dropna().unique())
     char_options = sorted(df[char_col].dropna().unique())
+
     selected_geo = st.sidebar.multiselect("Geography", ['All']+geo_options, ['All'])
     selected_strat = st.sidebar.multiselect("Strategy", ['All']+strat_options, ['All'])
     selected_char = st.sidebar.multiselect("Main Characteristic", ['All']+char_options, ['All'])
 
     filtered = df.copy()
+    if selected_periods and 'All' not in selected_periods:
+        filtered = filtered[filtered[period_col].astype(str).isin(selected_periods)]
     if selected_geo and 'All' not in selected_geo:
         filtered = filtered[filtered[geo_col].isin(selected_geo)]
     if selected_strat and 'All' not in selected_strat:
@@ -137,7 +147,9 @@ def create_dashboard(df):
     with col3:
         st.markdown(f"<div class='metric-value'>{format_number(avg_inv)} ILS</div><div class='metric-label'>Average Investment Size</div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Geography Analysis", "Strategy Analysis", "Main Characteristic Analysis", "Detailed Data", "Additional Insights"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "Geography Analysis", "Strategy Analysis", "Main Characteristic Analysis", "Quarterly Trend", "Detailed Data", "Additional Insights"
+    ])
 
     with tab1:
         st.markdown('<div class="sub-header">NAV Distribution by Geography</div>', unsafe_allow_html=True)
@@ -222,9 +234,27 @@ def create_dashboard(df):
             st.plotly_chart(fig_char_pie, use_container_width=True)
 
     with tab4:
+        st.markdown('<div class="sub-header">Quarterly Trend Analysis</div>', unsafe_allow_html=True)
+        # Trend by Geography
+        trend_data = df.groupby([period_col, geo_col])[nav_col].sum().reset_index()
+        fig_trend_geo = px.line(trend_data, x=period_col, y=nav_col, color=geo_col, markers=True,
+                                color_discrete_sequence=PROFESSIONAL_COLORS,
+                                labels={nav_col: "NAV (ILS)", period_col: "Period", geo_col: "Geography"})
+        fig_trend_geo.update_layout(title="NAV by Geography Over Time", paper_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig_trend_geo, use_container_width=True)
+
+        # Trend by Strategy
+        trend_strat = df.groupby([period_col, strat_col])[nav_col].sum().reset_index()
+        fig_trend_strat = px.line(trend_strat, x=period_col, y=nav_col, color=strat_col, markers=True,
+                                  color_discrete_sequence=PROFESSIONAL_COLORS,
+                                  labels={nav_col: "NAV (ILS)", period_col: "Period", strat_col: "Strategy"})
+        fig_trend_strat.update_layout(title="NAV by Strategy Over Time", paper_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig_trend_strat, use_container_width=True)
+
+    with tab5:
         st.markdown('<div class="sub-header">Detailed Investment Data</div>', unsafe_allow_html=True)
         # Drilldown
-        drill_type = st.radio("Drilldown by:", ["Geography", "Strategy", "Main Characteristic"], horizontal=True)
+        drill_type = st.radio("Drilldown by:", ["Geography", "Strategy", "Main Characteristic", "Period"], horizontal=True)
         if drill_type == "Geography":
             options = geo_options
             chosen = st.selectbox("Select Geography", options)
@@ -233,6 +263,10 @@ def create_dashboard(df):
             options = strat_options
             chosen = st.selectbox("Select Strategy", options)
             sub_df = df[df[strat_col]==chosen] if chosen in df[strat_col].unique() else df
+        elif drill_type == "Period":
+            options = period_options
+            chosen = st.selectbox("Select Period", options)
+            sub_df = df[df[period_col]==chosen] if chosen in df[period_col].unique() else df
         else:
             options = char_options
             chosen = st.selectbox("Select Main Characteristic", options)
@@ -244,9 +278,8 @@ def create_dashboard(df):
             file_name="filtered_investments.csv", mime="text/csv"
         )
 
-    with tab5:
+    with tab6:
         st.markdown('<div class="sub-header">Additional Insights</div>', unsafe_allow_html=True)
-
         # Example: Israel vs. International
         if geo_col:
             df['Israel_Flag'] = df[geo_col].apply(lambda x: 'Israel' if str(x).strip().lower() in ['israel', 'ישראל', 'il'] else 'International')
@@ -260,7 +293,6 @@ def create_dashboard(df):
                 pie = px.pie(israel_data, values=nav_col, names='Israel_Flag', hole=0.45,
                              color_discrete_sequence=PROFESSIONAL_COLORS)
                 st.plotly_chart(pie, use_container_width=True)
-
         # Currency
         if currency_col:
             currency_data = df.groupby(currency_col)[nav_col].sum().reset_index()
@@ -268,7 +300,6 @@ def create_dashboard(df):
             fig = px.bar(currency_data, x=currency_col, y=nav_col, color=currency_col,
                          color_discrete_sequence=PROFESSIONAL_COLORS)
             st.plotly_chart(fig, use_container_width=True)
-
         # Year (if available)
         if year_col:
             df['Year'] = pd.to_datetime(df[year_col], errors='coerce').dt.year
@@ -277,7 +308,6 @@ def create_dashboard(df):
             fig = px.bar(year_data, x='Year', y=nav_col, color='Year',
                          color_discrete_sequence=PROFESSIONAL_COLORS)
             st.plotly_chart(fig, use_container_width=True)
-
         # GP Analysis
         if gp_col:
             gp_data = df.groupby(gp_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False).head(10)
@@ -285,7 +315,6 @@ def create_dashboard(df):
             fig = px.bar(gp_data, x=nav_col, y=gp_col, orientation='h', color=gp_col,
                          color_discrete_sequence=PROFESSIONAL_COLORS)
             st.plotly_chart(fig, use_container_width=True)
-
         # Concentration/HHI
         geo_data = filtered.groupby(geo_col)[nav_col].sum().reset_index()
         strat_data = filtered.groupby(strat_col)[nav_col].sum().reset_index()
@@ -295,7 +324,6 @@ def create_dashboard(df):
         top_strat_pct = strat_data.iloc[0][nav_col]/total_nav*100 if not strat_data.empty else 0
         geo_hhi = ((geo_data[nav_col] / total_nav) ** 2).sum() * 10000 if not geo_data.empty else 0
         strat_hhi = ((strat_data[nav_col] / total_nav) ** 2).sum() * 10000 if not strat_data.empty else 0
-
         st.markdown(f"""
         <div class="insight-box">
         <h3>Portfolio Concentration</h3>
@@ -306,7 +334,7 @@ def create_dashboard(df):
         """, unsafe_allow_html=True)
 
 def main():
-    st.sidebar.title("Investment Funds Analysis")
+    st.sidebar.title("Investment Funds Quarterly Analysis")
     uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx", "xls"])
     if uploaded_file is not None:
         df = load_data(uploaded_file)
@@ -314,7 +342,7 @@ def main():
             create_dashboard(df)
     else:
         st.markdown('<div class="main-header">Investment Funds Analysis Dashboard</div>', unsafe_allow_html=True)
-        st.write("Please upload an Excel file containing investment funds data.")
+        st.write("Please upload an Excel file containing investment funds data. Each row should have a period/quarter column (רבעון/שנה/Period/Date).")
 
 if __name__ == "__main__":
     main()
