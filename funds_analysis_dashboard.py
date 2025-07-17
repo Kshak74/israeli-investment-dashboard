@@ -323,10 +323,10 @@ def create_dashboard(df):
         if uploaded_files and len(uploaded_files) > 1:
             dfs = []
             period_labels = []
-            for file in uploaded_files:
+            for i, file in enumerate(uploaded_files):
                 df2 = load_data(file)
                 default_period = file.name.split('.')[0]
-                period = st.text_input(f"תווית רבעון עבור {file.name}", value=default_period, key=f'label_{file.name}')
+                period = st.text_input(f"תווית רבעון עבור {file.name}", value=default_period, key=f'label_{i}_{file.name}')
                 df2['Period'] = period
                 dfs.append(df2)
                 period_labels.append(period)
