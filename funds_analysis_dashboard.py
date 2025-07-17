@@ -67,6 +67,9 @@ def normalize_columns(df):
         "שווי הוגן (באלפי ש\"ח)": 'NAV (ILS)',
         "שווי הוגן (באלפי ש''ח)": 'NAV (ILS)',
         "nav (במטבע הדיווח של קרן ההשקעה)": "NAV (OC)",
+        'מאפיין עיקרי': 'Main Characteristic',
+        'characteristic': 'Main Characteristic',
+        'feature': 'Main Characteristic'
     }
     df = df.rename(columns={c: col_map.get(c.strip().lower(), c) for c in df.columns})
     return df
@@ -84,23 +87,28 @@ def load_data(uploaded_file):
         return None
 
 def create_dashboard(df):
-    # ---- Dashboard ראשי כמו קודם ----
     st.sidebar.title("Investment Funds Analysis")
     nav_col = 'NAV (ILS)'
     geo_col = 'Geography'
     strat_col = 'Strategy'
+    char_col = 'Main Characteristic' if 'Main Characteristic' in df.columns else None
 
     st.sidebar.subheader("Filters")
     geo_options = sorted(df[geo_col].dropna().unique())
     strat_options = sorted(df[strat_col].dropna().unique())
+    char_options = sorted(df[char_col].dropna().unique()) if char_col else []
+
     selected_geo = st.sidebar.multiselect("Geography", ['All']+geo_options, ['All'])
     selected_strat = st.sidebar.multiselect("Strategy", ['All']+strat_options, ['All'])
+    selected_char = st.sidebar.multiselect("Main Characteristic", ['All']+char_options, ['All']) if char_col else []
 
     filtered = df.copy()
     if selected_geo and 'All' not in selected_geo:
         filtered = filtered[filtered[geo_col].isin(selected_geo)]
     if selected_strat and 'All' not in selected_strat:
         filtered = filtered[filtered[strat_col].isin(selected_strat)]
+    if char_col and selected_char and 'All' not in selected_char:
+        filtered = filtered[filtered[char_col].isin(selected_char)]
 
     total_nav = filtered[nav_col].sum()
     total_inv = len(filtered)
@@ -127,7 +135,10 @@ def create_dashboard(df):
                 geo_data, x=nav_col, y=geo_col, orientation='h', color=geo_col,
                 color_discrete_sequence=PROFESSIONAL_COLORS, width=550, height=500
             )
+            fig_geo_bar.update_traces(marker_line_width=0, marker_line_color="black", width=0.8) # עיבוי ברים
             fig_geo_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
+            fig_geo_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
+            fig_geo_bar.update_yaxes(tickfont=dict(size=16), title="Geography")
             st.plotly_chart(fig_geo_bar, use_container_width=True)
         with col2:
             fig_geo_pie = px.pie(
@@ -140,16 +151,52 @@ def create_dashboard(df):
     with tab2:
         st.markdown('<div class="sub-header">NAV Distribution by Strategy</div>', unsafe_allow_html=True)
         strat_data = filtered.groupby(strat_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False)
-        fig_strat_bar = px.bar(
-            strat_data, x=nav_col, y=strat_col, orientation='h', color=strat_col,
-            color_discrete_sequence=PROFESSIONAL_COLORS, width=700, height=500
-        )
-        fig_strat_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
-        st.plotly_chart(fig_strat_bar, use_container_width=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            fig_strat_bar = px.bar(
+                strat_data, x=nav_col, y=strat_col, orientation='h', color=strat_col,
+                color_discrete_sequence=PROFESSIONAL_COLORS, width=700, height=500
+            )
+            fig_strat_bar.update_traces(marker_line_width=0, marker_line_color="black", width=0.8)
+            fig_strat_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
+            fig_strat_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
+            fig_strat_bar.update_yaxes(tickfont=dict(size=16), title="Strategy")
+            st.plotly_chart(fig_strat_bar, use_container_width=True)
+        with col2:
+            fig_strat_pie = px.pie(
+                strat_data, values=nav_col, names=strat_col,
+                hole=0.45, color_discrete_sequence=PROFESSIONAL_COLORS
+            )
+            fig_strat_pie.update_layout(height=500, showlegend=True, paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_strat_pie, use_container_width=True)
 
     with tab3:
         st.markdown('<div class="sub-header">NAV Distribution by Main Characteristic</div>', unsafe_allow_html=True)
-        st.write("You can implement more breakdowns here if you want (not included in demo code).")
+        if char_col and char_col in filtered.columns:
+            char_data = filtered.groupby(char_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False)
+            if not char_data.empty:
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig_char_bar = px.bar(
+                        char_data, x=nav_col, y=char_col, orientation='h', color=char_col,
+                        color_discrete_sequence=PROFESSIONAL_COLORS, width=550, height=500
+                    )
+                    fig_char_bar.update_traces(marker_line_width=0, marker_line_color="black", width=0.8)
+                    fig_char_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
+                    fig_char_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
+                    fig_char_bar.update_yaxes(tickfont=dict(size=16), title="Main Characteristic")
+                    st.plotly_chart(fig_char_bar, use_container_width=True)
+                with col2:
+                    fig_char_pie = px.pie(
+                        char_data, values=nav_col, names=char_col,
+                        hole=0.45, color_discrete_sequence=PROFESSIONAL_COLORS
+                    )
+                    fig_char_pie.update_layout(height=500, showlegend=True, paper_bgcolor='rgba(0,0,0,0)')
+                    st.plotly_chart(fig_char_pie, use_container_width=True)
+            else:
+                st.info("No data to display for Main Characteristic.")
+        else:
+            st.info("Column 'Main Characteristic' is missing from data.")
 
     with tab4:
         st.markdown('<div class="sub-header">Detailed Investment Data</div>', unsafe_allow_html=True)
@@ -161,7 +208,24 @@ def create_dashboard(df):
 
     with tab5:
         st.markdown('<div class="sub-header">Additional Insights</div>', unsafe_allow_html=True)
-        # ... (you can add more summary here)
+        try:
+            if geo_col in df.columns:
+                df['Israel_Flag'] = df[geo_col].apply(lambda x: 'Israel' if str(x).strip().lower() in ['israel', 'ישראל', 'il'] else 'International')
+                israel_data = df.groupby('Israel_Flag')[nav_col].sum().reset_index()
+                col1, col2 = st.columns(2)
+                with col1:
+                    fig = px.bar(israel_data, x='Israel_Flag', y=nav_col, color='Israel_Flag',
+                                 color_discrete_sequence=PROFESSIONAL_COLORS)
+                    st.plotly_chart(fig, use_container_width=True)
+                with col2:
+                    pie = px.pie(israel_data, values=nav_col, names='Israel_Flag', hole=0.45,
+                                 color_discrete_sequence=PROFESSIONAL_COLORS)
+                    st.plotly_chart(pie, use_container_width=True)
+            else:
+                st.info("No Geography data for Additional Insights.")
+
+        except Exception as e:
+            st.warning(f"Could not generate Additional Insights: {e}")
 
     # --------------------------
     #   טאב חדש: השוואה בין רבעונים
@@ -171,31 +235,31 @@ def create_dashboard(df):
         uploaded_files = st.file_uploader("Upload quarterly Excel files to compare trends", type=["xlsx", "xls"], accept_multiple_files=True, key="multi_upload")
         if uploaded_files and len(uploaded_files) > 1:
             dfs = []
+            period_list = []
             for file in uploaded_files:
                 df2 = pd.read_excel(file, engine='openpyxl')
                 df2 = normalize_columns(df2)
-                # שאל את המשתמש מהי התווית של הרבעון (אפשר אוטומטי מהשם)
+                # תשאל את המשתמש את שם הרבעון (אבל תציע כברירת מחדל את שם הקובץ)
                 default_period = file.name.split('.')[0]
                 period = st.text_input(f"תווית רבעון עבור {file.name}", value=default_period, key=f'label_{file.name}')
-                df2['Period'] = period
+                df2['Period'] = period.strip()
                 dfs.append(df2)
+                period_list.append(period.strip())
             all_data = pd.concat(dfs, ignore_index=True)
-
-            # ----- טיפול בשמות עמודות כפולים/שגויים -----
-            all_data = all_data.loc[:, ~all_data.columns.duplicated()]
-            for col in ['Period', 'Geography', 'Strategy']:
-                if col in all_data.columns:
-                    all_data[col] = all_data[col].astype(str)
+            # תקן לפי סדר כרונולוגי לפי ה-Period (אם אפשר)
+            all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted(period_list), ordered=True)
 
             st.markdown("### שינוי חשיפה לפי Geography")
             if 'Geography' in all_data.columns and 'NAV (ILS)' in all_data.columns:
                 geo_trend = all_data.groupby(['Period', 'Geography'])['NAV (ILS)'].sum().reset_index()
+                geo_trend = geo_trend.sort_values('Period')
                 fig_geo = px.line(geo_trend, x='Period', y='NAV (ILS)', color='Geography', markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
                 st.plotly_chart(fig_geo, use_container_width=True)
 
             st.markdown("### שינוי חשיפה לפי Strategy")
             if 'Strategy' in all_data.columns and 'NAV (ILS)' in all_data.columns:
                 strat_trend = all_data.groupby(['Period', 'Strategy'])['NAV (ILS)'].sum().reset_index()
+                strat_trend = strat_trend.sort_values('Period')
                 fig_strat = px.line(strat_trend, x='Period', y='NAV (ILS)', color='Strategy', markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
                 st.plotly_chart(fig_strat, use_container_width=True)
 
