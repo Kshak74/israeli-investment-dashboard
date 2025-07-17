@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import collections
+import re
 
 st.set_page_config(
     page_title="Investment Funds Analysis Dashboard",
@@ -76,6 +77,19 @@ def detect_column(df, keywords, must_numeric=False, prefer_exact=None):
                 return col
     return candidates[0] if candidates else df.columns[0]
 
+def sort_quarters(periods):
+    # Try to sort like Q1 2024 < Q2 2024 < Q4 2024 < Q1 2025 etc
+    def quarter_key(period):
+        m = re.match(r"Q(\d)[^\d]*(\d{2,4})", period.replace(" ", ""))
+        if m:
+            q = int(m.group(1))
+            y = int(m.group(2))
+            # Fix years like '24' -> 2024
+            if y < 100: y += 2000
+            return (y, q)
+        return (9999, 99)  # push unrecognized to end
+    return sorted(periods, key=quarter_key)
+
 def create_dashboard(df):
     if df is None or df.empty:
         st.warning("No data available. Please upload a file.")
@@ -90,14 +104,12 @@ def create_dashboard(df):
     year_col = detect_column(df, ['year', 'שנה', 'date', 'תאריך'])
     gp_col = detect_column(df, ['gp', 'general partner', 'manager', 'מנהל'])
 
-    # Allow manual correction
     st.sidebar.subheader("Column Selection (for correction)")
     nav_col = st.sidebar.selectbox("NAV Column", [nav_col]+[c for c in df.columns if c!=nav_col], 0)
     geo_col = st.sidebar.selectbox("Geography Column", [geo_col]+[c for c in df.columns if c!=geo_col], 0)
     strat_col = st.sidebar.selectbox("Strategy Column", [strat_col]+[c for c in df.columns if c!=strat_col], 0)
     char_col = st.sidebar.selectbox("Main Characteristic", [char_col]+[c for c in df.columns if c!=char_col], 0)
 
-    # Filters
     st.sidebar.subheader("Filters")
     geo_options = sorted(df[geo_col].dropna().unique())
     strat_options = sorted(df[strat_col].dropna().unique())
@@ -114,7 +126,6 @@ def create_dashboard(df):
     if selected_char and 'All' not in selected_char:
         filtered = filtered[filtered[char_col].isin(selected_char)]
 
-    # KPIs
     total_nav = filtered[nav_col].sum()
     total_inv = len(filtered)
     avg_inv = total_nav / total_inv if total_inv else 0
@@ -237,7 +248,57 @@ def create_dashboard(df):
     # --------- Additional Insights ----------
     with tab5:
         st.markdown('<div class="sub-header">Additional Insights</div>', unsafe_allow_html=True)
-        # (החלק הזה לא השתנה - ישאר כמו בקוד הקודם שלך)
+        if geo_col:
+            df['Israel_Flag'] = df[geo_col].apply(lambda x: 'Israel' if str(x).strip().lower() in ['israel', 'ישראל', 'il'] else 'International')
+            israel_data = df.groupby('Israel_Flag')[nav_col].sum().reset_index()
+            col1, col2 = st.columns(2)
+            with col1:
+                fig = px.bar(israel_data, x='Israel_Flag', y=nav_col, color='Israel_Flag',
+                             color_discrete_sequence=PROFESSIONAL_COLORS)
+                st.plotly_chart(fig, use_container_width=True)
+            with col2:
+                pie = px.pie(israel_data, values=nav_col, names='Israel_Flag', hole=0.45,
+                             color_discrete_sequence=PROFESSIONAL_COLORS)
+                st.plotly_chart(pie, use_container_width=True)
+
+        if currency_col:
+            currency_data = df.groupby(currency_col)[nav_col].sum().reset_index()
+            st.subheader(f"NAV by {currency_col}")
+            fig = px.bar(currency_data, x=currency_col, y=nav_col, color=currency_col,
+                         color_discrete_sequence=PROFESSIONAL_COLORS)
+            st.plotly_chart(fig, use_container_width=True)
+
+        if year_col:
+            df['Year'] = pd.to_datetime(df[year_col], errors='coerce').dt.year
+            year_data = df.groupby('Year')[nav_col].sum().reset_index().dropna()
+            st.subheader("NAV by Year")
+            fig = px.bar(year_data, x='Year', y=nav_col, color='Year',
+                         color_discrete_sequence=PROFESSIONAL_COLORS)
+            st.plotly_chart(fig, use_container_width=True)
+
+        if gp_col:
+            gp_data = df.groupby(gp_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False).head(10)
+            st.subheader(f"Top 10 {gp_col} by NAV")
+            fig = px.bar(gp_data, x=nav_col, y=gp_col, orientation='h', color=gp_col,
+                         color_discrete_sequence=PROFESSIONAL_COLORS)
+            st.plotly_chart(fig, use_container_width=True)
+
+        geo_data = filtered.groupby(geo_col)[nav_col].sum().reset_index()
+        strat_data = filtered.groupby(strat_col)[nav_col].sum().reset_index()
+        top_geo = geo_data.iloc[0][geo_col] if not geo_data.empty else "-"
+        top_geo_pct = geo_data.iloc[0][nav_col]/total_nav*100 if not geo_data.empty else 0
+        top_strat = strat_data.iloc[0][strat_col] if not strat_data.empty else "-"
+        top_strat_pct = strat_data.iloc[0][nav_col]/total_nav*100 if not strat_data.empty else 0
+        geo_hhi = ((geo_data[nav_col] / total_nav) ** 2).sum() * 10000 if not geo_data.empty else 0
+        strat_hhi = ((strat_data[nav_col] / total_nav) ** 2).sum() * 10000 if not strat_data.empty else 0
+        st.markdown(f"""
+        <div class="insight-box">
+        <h3>Portfolio Concentration</h3>
+        Top Geography: <b>{top_geo}</b> ({top_geo_pct:.1f}%)<br>
+        Top Strategy: <b>{top_strat}</b> ({top_strat_pct:.1f}%)<br>
+        Geography HHI: <b>{geo_hhi:.0f}</b> &nbsp;&nbsp;|&nbsp; Strategy HHI: <b>{strat_hhi:.0f}</b>
+        </div>
+        """, unsafe_allow_html=True)
 
     # --------- Quarterly Comparison ----------
     with tab6:
@@ -253,15 +314,16 @@ def create_dashboard(df):
                 df2['Period'] = period
                 dfs.append(df2)
                 period_labels.append(period)
-
-            # בחר סדר כרונולוגי של התקופות
-            sorted_periods = st.multiselect(
-                "סדר כרונולוגי להצגה (גרור או סמן סדר!)",
-                options=period_labels,
-                default=sorted(set(period_labels), key=lambda x: x)
+            # סדר אוטומטי של תקופות רבעון
+            sorted_periods = sort_quarters(period_labels)
+            # אפשר גם לגרור/לבחור ידנית אם רוצים סדר אחר
+            manual_periods = st.multiselect(
+                "סדר כרונולוגי מותאם (גרור או סמן סדר!)",
+                options=sorted_periods,
+                default=sorted_periods
             )
-            if not sorted_periods:
-                sorted_periods = sorted(set(period_labels), key=lambda x: x)
+            if manual_periods:
+                sorted_periods = manual_periods
 
             all_data = pd.concat(dfs, ignore_index=True)
             all_data = all_data.loc[:, ~all_data.columns.duplicated()]
@@ -273,7 +335,6 @@ def create_dashboard(df):
             st.markdown("### שינוי חשיפה לפי Geography")
             if 'Geography' in all_data.columns and 'NAV (ILS)' in all_data.columns:
                 geo_trend = all_data.groupby(['Period', 'Geography'])['NAV (ILS)'].sum().reset_index()
-                geo_trend = geo_trend.sort_values('Period')
                 fig_geo = px.line(geo_trend, x='Period', y='NAV (ILS)', color='Geography', markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
                 fig_geo.update_xaxes(type='category')
                 st.plotly_chart(fig_geo, use_container_width=True)
@@ -281,17 +342,14 @@ def create_dashboard(df):
             st.markdown("### שינוי חשיפה לפי Strategy")
             if 'Strategy' in all_data.columns and 'NAV (ILS)' in all_data.columns:
                 strat_trend = all_data.groupby(['Period', 'Strategy'])['NAV (ILS)'].sum().reset_index()
-                strat_trend = strat_trend.sort_values('Period')
                 fig_strat = px.line(strat_trend, x='Period', y='NAV (ILS)', color='Strategy', markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
                 fig_strat.update_xaxes(type='category')
                 st.plotly_chart(fig_strat, use_container_width=True)
 
-            # --- טבלת השינויים המהותיים (הפרש ב־NAV בין התקופות) ---
             st.markdown("### שינוי NAV מהותי לפי אסטרטגיה")
             pivot_strat = all_data.pivot_table(index='Strategy', columns='Period', values='NAV (ILS)', aggfunc='sum').fillna(0)
             pivot_strat['Change'] = pivot_strat.iloc[:, -1] - pivot_strat.iloc[:, 0]
             pivot_strat = pivot_strat.sort_values('Change', ascending=False)
-            # עיצוב מספרים עם פסיקים
             pivot_strat = pivot_strat.applymap(lambda x: f"{x:,.0f}")
             st.dataframe(pivot_strat, use_container_width=True)
 
