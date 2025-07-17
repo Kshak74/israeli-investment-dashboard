@@ -301,7 +301,12 @@ def create_dashboard(df):
     # --------- Quarterly Comparison ----------
     with tab6:
         st.header("Quarterly Comparison: Trends by Geography and Strategy")
-        uploaded_files = st.file_uploader("Upload quarterly Excel files to compare trends", type=["xlsx", "xls"], accept_multiple_files=True, key="multi_upload")
+        uploaded_files = st.file_uploader(
+            "Upload quarterly Excel files to compare trends",
+            type=["xlsx", "xls"],
+            accept_multiple_files=True,
+            key="multi_upload"
+        )
         if uploaded_files and len(uploaded_files) > 1:
             dfs = []
             period_labels = []
@@ -314,12 +319,18 @@ def create_dashboard(df):
                 period_labels.append(period)
             sorted_periods = sort_quarters(period_labels)
 
-            # Checkbox for reverse order
-            reverse_order = st.checkbox("הפוך את סדר התקופות בציר הזמן (Q4 24 > Q1 25 או להפך)", value=False)
-            if reverse_order:
-                sorted_periods = list(reversed(sorted_periods))
+            st.markdown("#### סדר את התקופות שאתה רוצה לראות בגרף (גרור/סמן)")
+            manual_periods = st.multiselect(
+                "בחר את כל הרבעונים והסדר שלהם בציר הזמן:",
+                options=sorted_periods,
+                default=sorted_periods,
+                key="period_sorter"
+            )
+            if len(manual_periods) != len(sorted_periods):
+                st.warning("יש לבחור את **כל** הרבעונים ולסדר אותם כרצונך.")
+                return
+            sorted_periods = manual_periods
 
-            # Use only the chosen order (no multiselect)
             all_data = pd.concat(dfs, ignore_index=True)
             all_data = all_data.loc[:, ~all_data.columns.duplicated()]
             all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
