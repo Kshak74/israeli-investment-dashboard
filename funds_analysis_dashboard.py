@@ -77,14 +77,27 @@ def detect_column(df, keywords, must_numeric=False, prefer_exact=None):
                 return col
     return candidates[0] if candidates else df.columns[0]
 
+# עדכון: פונקציה מתקדמת שמסדרת רבעונים ותקופות במגוון פורמטים
 def sort_quarters(periods):
     def quarter_key(period):
-        m = re.match(r"Q(\d)[^\d]*(\d{2,4})", period.replace(" ", ""))
+        s = period.replace(" ", "").replace("-", "").lower()
+        # אנגלית Q1-2024 או Q1/2024
+        m = re.match(r"q([1-4])[^\d]?(\d{4})", s)
         if m:
-            q = int(m.group(1))
-            y = int(m.group(2))
-            if y < 100: y += 2000
-            return (y, q)
+            return (int(m.group(2)), int(m.group(1)))
+        # עברית: רבעון1/2024, רבעון1-2024, רבעון 1 2024
+        m = re.match(r"רבעון\s*([1-4])[\s\-\/]?(\d{4})", period.replace("-", " ").replace("/", " "))
+        if m:
+            return (int(m.group(2)), int(m.group(1)))
+        # פורמט 2024Q1
+        m = re.match(r"(\d{4})q([1-4])", s)
+        if m:
+            return (int(m.group(1)), int(m.group(2)))
+        # תאריך מלא (שנה-חודש, 2024-03)
+        m = re.match(r"(\d{4})[\/\-](\d{2})", s)
+        if m:
+            return (int(m.group(1)), int(m.group(2)))
+        # ברירת מחדל: שים תקופה בסוף
         return (9999, 99)
     return sorted(periods, key=quarter_key)
 
@@ -318,6 +331,11 @@ def create_dashboard(df):
                 dfs.append(df2)
                 period_labels.append(period)
             sorted_periods = sort_quarters(period_labels)
+
+            # כאן אפשר להוסיף אפשרות לסדר עולה/יורד
+            sort_order = st.radio("כיוון סידור התקופות", ["מהישן לחדש", "מהחדש לישן"], horizontal=True, index=0)
+            if sort_order == "מהחדש לישן":
+                sorted_periods = list(reversed(sorted_periods))
 
             st.markdown("#### סדר את התקופות שאתה רוצה לראות בגרף (גרור/סמן)")
             manual_periods = st.multiselect(
