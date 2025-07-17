@@ -78,16 +78,14 @@ def detect_column(df, keywords, must_numeric=False, prefer_exact=None):
     return candidates[0] if candidates else df.columns[0]
 
 def sort_quarters(periods):
-    # Try to sort like Q1 2024 < Q2 2024 < Q4 2024 < Q1 2025 etc
     def quarter_key(period):
         m = re.match(r"Q(\d)[^\d]*(\d{2,4})", period.replace(" ", ""))
         if m:
             q = int(m.group(1))
             y = int(m.group(2))
-            # Fix years like '24' -> 2024
             if y < 100: y += 2000
             return (y, q)
-        return (9999, 99)  # push unrecognized to end
+        return (9999, 99)
     return sorted(periods, key=quarter_key)
 
 def create_dashboard(df):
@@ -314,11 +312,16 @@ def create_dashboard(df):
                 df2['Period'] = period
                 dfs.append(df2)
                 period_labels.append(period)
-            # סדר אוטומטי של תקופות רבעון
             sorted_periods = sort_quarters(period_labels)
-            # אפשר גם לגרור/לבחור ידנית אם רוצים סדר אחר
+
+            # --------- HERE: Add a checkbox to reverse order ----------
+            reverse_order = st.checkbox("הפוך את סדר התקופות (ימין/שמאל)", value=False)
+            if reverse_order:
+                sorted_periods = list(reversed(sorted_periods))
+            # ----------------------------------------------------------
+
             manual_periods = st.multiselect(
-                "סדר כרונולוגי מותאם (גרור או סמן סדר!)",
+                "סדר כרונולוגי מותאם (לא חובה, גרור או סמן סדר!)",
                 options=sorted_periods,
                 default=sorted_periods
             )
