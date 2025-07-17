@@ -306,19 +306,20 @@ def create_dashboard(df):
             period_labels = []
             for file in uploaded_files:
                 df2 = load_data(file)
-                # שאל את המשתמש מהי התווית של הרבעון (אפשר אוטומטי מהשם)
                 default_period = file.name.split('.')[0]
                 period = st.text_input(f"תווית רבעון עבור {file.name}", value=default_period, key=f'label_{file.name}')
                 df2['Period'] = period
                 dfs.append(df2)
                 period_labels.append(period)
+            # סדר תקופות לפי ערך (ולא לפי סדר העלאה!)
+            sorted_periods = sorted(set(period_labels), key=lambda x: x)
             all_data = pd.concat(dfs, ignore_index=True)
             all_data = all_data.loc[:, ~all_data.columns.duplicated()]
-            # סדר כרונולוגי: לפי סדר קבצים/labels
-            all_data['Period'] = pd.Categorical(all_data['Period'], categories=period_labels, ordered=True)
+            all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
             for col in ['Period', 'Geography', 'Strategy']:
                 if col in all_data.columns:
                     all_data[col] = all_data[col].astype(str)
+
             st.markdown("### שינוי חשיפה לפי Geography")
             if 'Geography' in all_data.columns and 'NAV (ILS)' in all_data.columns:
                 geo_trend = all_data.groupby(['Period', 'Geography'])['NAV (ILS)'].sum().reset_index()
@@ -333,9 +334,20 @@ def create_dashboard(df):
                 fig_strat = px.line(strat_trend, x='Period', y='NAV (ILS)', color='Strategy', markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
                 fig_strat.update_xaxes(type='category')
                 st.plotly_chart(fig_strat, use_container_width=True)
-            st.markdown("### All Data")
-            st.dataframe(all_data, use_container_width=True)
-            st.download_button("Download combined data", all_data.to_csv(index=False).encode("utf-8-sig"), file_name="combined_quarters.csv", mime="text/csv")
+
+            # --- טבלת השינויים המהותיים (הפרש ב־NAV בין התקופות) ---
+            st.markdown("### שינוי NAV מהותי לפי אסטרטגיה")
+            # Pivot לטבלת השוואה בין תקופות
+            pivot_strat = all_data.pivot_table(index='Strategy', columns='Period', values='NAV (ILS)', aggfunc='sum').fillna(0)
+            pivot_strat['Change'] = pivot_strat.iloc[:, -1] - pivot_strat.iloc[:, 0]
+            pivot_strat = pivot_strat.sort_values('Change', ascending=False)
+            st.dataframe(pivot_strat, use_container_width=True)
+
+            st.markdown("### שינוי NAV מהותי לפי גיאוגרפיה")
+            pivot_geo = all_data.pivot_table(index='Geography', columns='Period', values='NAV (ILS)', aggfunc='sum').fillna(0)
+            pivot_geo['Change'] = pivot_geo.iloc[:, -1] - pivot_geo.iloc[:, 0]
+            pivot_geo = pivot_geo.sort_values('Change', ascending=False)
+            st.dataframe(pivot_geo, use_container_width=True)
         else:
             st.info("Please upload at least two quarterly files to view trends.")
 
