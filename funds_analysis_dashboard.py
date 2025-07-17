@@ -314,20 +314,12 @@ def create_dashboard(df):
                 period_labels.append(period)
             sorted_periods = sort_quarters(period_labels)
 
-            # --------- HERE: Add a checkbox to reverse order ----------
-            reverse_order = st.checkbox("הפוך את סדר התקופות (ימין/שמאל)", value=False)
+            # Checkbox for reverse order
+            reverse_order = st.checkbox("הפוך את סדר התקופות בציר הזמן (Q4 24 > Q1 25 או להפך)", value=False)
             if reverse_order:
                 sorted_periods = list(reversed(sorted_periods))
-            # ----------------------------------------------------------
 
-            manual_periods = st.multiselect(
-                "סדר כרונולוגי מותאם (לא חובה, גרור או סמן סדר!)",
-                options=sorted_periods,
-                default=sorted_periods
-            )
-            if manual_periods:
-                sorted_periods = manual_periods
-
+            # Use only the chosen order (no multiselect)
             all_data = pd.concat(dfs, ignore_index=True)
             all_data = all_data.loc[:, ~all_data.columns.duplicated()]
             all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
