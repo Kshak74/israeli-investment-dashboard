@@ -3,14 +3,8 @@ import pandas as pd
 import plotly.express as px
 import collections
 
-# Page config
-st.set_page_config(
-    page_title="Investment Funds Analysis Dashboard",
-    page_icon="📊",
-    layout="wide"
-)
+st.set_page_config(page_title="Quarterly Investment Analysis", page_icon="📊", layout="wide")
 
-# D3 Colors
 PROFESSIONAL_COLORS = [
     '#003f5c', '#2f4b7c', '#665191', '#a05195', '#d45087',
     '#f95d6a', '#ff7c43', '#ffa600', '#90be6d', '#43aa8b'
@@ -30,16 +24,11 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def format_number(num):
-    if pd.isnull(num):
-        return "-"
-    if num >= 1_000_000_000:
-        return f"{num/1_000_000_000:.2f}B"
-    elif num >= 1_000_000:
-        return f"{num/1_000_000:.2f}M"
-    elif num >= 1_000:
-        return f"{num/1_000:.2f}K"
-    else:
-        return f"{num:.2f}"
+    if pd.isnull(num): return "-"
+    if num >= 1_000_000_000: return f"{num/1_000_000_000:.2f}B"
+    elif num >= 1_000_000: return f"{num/1_000_000:.2f}M"
+    elif num >= 1_000: return f"{num/1_000:.2f}K"
+    else: return f"{num:.2f}"
 
 def ensure_unique_columns(df):
     if df is None or df.empty: return df
@@ -56,75 +45,66 @@ def ensure_unique_columns(df):
         df.columns = new_cols
     return df
 
+def normalize_columns(df):
+    col_map = {
+        'investment name': 'Investment Name',
+        'שם קרן השקעה': 'Investment Name',
+        'geography': 'Geography',
+        'מדינה לפי חשיפה כלכלית': 'Geography',
+        'strategy': 'Strategy',
+        'אסטרטגיה': 'Strategy',
+        'nav (ils)': 'NAV (ILS)',
+        "שווי הוגן (באלפי ש\"ח)": 'NAV (ILS)',
+        "שווי הוגן (באלפי ש''ח)": 'NAV (ILS)',
+        "nav (במטבע הדיווח של קרן ההשקעה)": "NAV (OC)",
+    }
+    df = df.rename(columns={c: col_map.get(c.strip().lower(), c) for c in df.columns})
+    return df
+
 def load_data(uploaded_file):
     try:
         df = pd.read_excel(uploaded_file, engine='openpyxl')
         df.columns = df.columns.astype(str).str.strip()
-        df.columns = [f'Column_{i}' if pd.isna(col) or col == '' else col for i, col in enumerate(df.columns)]
+        df = normalize_columns(df)
         df = ensure_unique_columns(df)
         df = df.dropna(how='all').dropna(axis=1, how='all')
-        for col in df.columns:
-            if 'NAV' in col or 'nav' in col.lower() or 'value' in col.lower() or 'amount' in col.lower():
-                df[col] = pd.to_numeric(df[col], errors='coerce')
         return df
     except Exception as e:
         st.error(f"Error loading data: {str(e)}")
         return None
 
-def detect_column(df, keywords, must_numeric=False, prefer_exact=None):
-    prefer_exact = prefer_exact or []
-    candidates = []
-    for col in df.columns:
-        lower_col = col.lower()
-        if any(k in lower_col for k in keywords):
-            if not must_numeric or pd.api.types.is_numeric_dtype(df[col]):
-                candidates.append(col)
-    for col in prefer_exact:
-        if col in df.columns:
-            if not must_numeric or pd.api.types.is_numeric_dtype(df[col]):
-                return col
-    return candidates[0] if candidates else df.columns[0]
+def merge_quarters(dfs, period_names):
+    for i, (df, pname) in enumerate(zip(dfs, period_names)):
+        df['Period'] = pname
+    common_cols = set(dfs[0].columns)
+    for df in dfs[1:]:
+        common_cols &= set(df.columns)
+    dfs_common = [df[list(common_cols) + ['Period']] for df in dfs]
+    return pd.concat(dfs_common, ignore_index=True)
 
 def create_dashboard(df):
-    if df is None or df.empty:
-        st.warning("No data available. Please upload a file.")
-        return
+    st.sidebar.title("Quarterly Analysis Filters")
+    period_col = 'Period'
+    geo_col = 'Geography'
+    strat_col = 'Strategy'
+    nav_col = 'NAV (ILS)'
 
-    # Detect columns (try to use exact if exists, fallback to contains)
-    nav_col = detect_column(df, ['nav', 'שווי', 'value', 'amount', 'סכום', 'ערך'], must_numeric=True)
-    geo_col = detect_column(df, ['geo', 'מדינה', 'country', 'אזור', 'region'], prefer_exact=['Geography', 'מדינה'])
-    strat_col = detect_column(df, ['strategy', 'אסטרטגיה', 'type', 'סוג'], prefer_exact=['Strategy', 'אסטרטגיה'])
-    char_col = detect_column(df, ['מאפיין', 'characteristic', 'feature'], prefer_exact=['מאפיין עיקרי'])
-    fund_col = detect_column(df, ['fund', 'קרן', 'name', 'שם'])
-    currency_col = detect_column(df, ['currency', 'מטבע'])
-    year_col = detect_column(df, ['year', 'שנה', 'date', 'תאריך'])
-    gp_col = detect_column(df, ['gp', 'general partner', 'manager', 'מנהל'])
-
-    # Allow manual correction
-    st.sidebar.subheader("Column Selection (for correction)")
-    nav_col = st.sidebar.selectbox("NAV Column", [nav_col]+[c for c in df.columns if c!=nav_col], 0)
-    geo_col = st.sidebar.selectbox("Geography Column", [geo_col]+[c for c in df.columns if c!=geo_col], 0)
-    strat_col = st.sidebar.selectbox("Strategy Column", [strat_col]+[c for c in df.columns if c!=strat_col], 0)
-    char_col = st.sidebar.selectbox("Main Characteristic", [char_col]+[c for c in df.columns if c!=char_col], 0)
-
-    # Filters
-    st.sidebar.subheader("Filters")
+    period_options = sorted(df[period_col].dropna().astype(str).unique())
+    selected_periods = st.sidebar.multiselect("Select Period(s)", period_options, period_options)
     geo_options = sorted(df[geo_col].dropna().unique())
     strat_options = sorted(df[strat_col].dropna().unique())
-    char_options = sorted(df[char_col].dropna().unique())
+
     selected_geo = st.sidebar.multiselect("Geography", ['All']+geo_options, ['All'])
     selected_strat = st.sidebar.multiselect("Strategy", ['All']+strat_options, ['All'])
-    selected_char = st.sidebar.multiselect("Main Characteristic", ['All']+char_options, ['All'])
 
     filtered = df.copy()
+    if selected_periods:
+        filtered = filtered[filtered[period_col].astype(str).isin(selected_periods)]
     if selected_geo and 'All' not in selected_geo:
         filtered = filtered[filtered[geo_col].isin(selected_geo)]
     if selected_strat and 'All' not in selected_strat:
         filtered = filtered[filtered[strat_col].isin(selected_strat)]
-    if selected_char and 'All' not in selected_char:
-        filtered = filtered[filtered[char_col].isin(selected_char)]
 
-    # KPIs
     total_nav = filtered[nav_col].sum()
     total_inv = len(filtered)
     avg_inv = total_nav / total_inv if total_inv else 0
@@ -137,184 +117,64 @@ def create_dashboard(df):
     with col3:
         st.markdown(f"<div class='metric-value'>{format_number(avg_inv)} ILS</div><div class='metric-label'>Average Investment Size</div>", unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Geography Analysis", "Strategy Analysis", "Main Characteristic Analysis", "Detailed Data", "Additional Insights"])
+    tab1, tab2, tab3 = st.tabs(["Quarterly Trends", "Geography", "Strategy"])
 
     with tab1:
-        st.markdown('<div class="sub-header">NAV Distribution by Geography</div>', unsafe_allow_html=True)
-        geo_data = filtered.groupby(geo_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False)
-        col1, col2 = st.columns(2)
-        with col1:
-            fig_geo_bar = px.bar(
-                geo_data, x=nav_col, y=geo_col, orientation='h', color=geo_col,
-                color_discrete_sequence=PROFESSIONAL_COLORS, width=550, height=500
-            )
-            fig_geo_bar.update_traces(marker_line_width=0, width=0.65)
-            fig_geo_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
-            fig_geo_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
-            fig_geo_bar.update_yaxes(tickfont=dict(size=16), title="Geography")
-            st.plotly_chart(fig_geo_bar, use_container_width=True)
-        with col2:
-            fig_geo_pie = px.pie(
-                geo_data, values=nav_col, names=geo_col,
-                hole=0.45, color_discrete_sequence=PROFESSIONAL_COLORS
-            )
-            fig_geo_pie.update_layout(height=500, showlegend=True, paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_geo_pie, use_container_width=True)
-        # Insights
-        if not geo_data.empty:
-            st.markdown(f"""
-            <div class="insight-box">
-                <h3>Geography Insights</h3>
-                <p>The largest exposure is <b>{geo_data.iloc[0][geo_col]}</b> ({geo_data.iloc[0][nav_col]/total_nav*100:.1f}%)</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.subheader("Trend of NAV (ILS) by Strategy Over Periods")
+        trend = filtered.groupby(['Period', strat_col])[nav_col].sum().reset_index()
+        fig = px.line(trend, x='Period', y=nav_col, color=strat_col, markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
+        st.plotly_chart(fig, use_container_width=True)
 
     with tab2:
-        st.markdown('<div class="sub-header">NAV Distribution by Strategy</div>', unsafe_allow_html=True)
-        strat_data = filtered.groupby(strat_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False)
-        col1, col2 = st.columns(2)
-        with col1:
-            fig_strat_bar = px.bar(
-                strat_data, x=nav_col, y=strat_col, orientation='h', color=strat_col,
-                color_discrete_sequence=PROFESSIONAL_COLORS, width=550, height=500
-            )
-            fig_strat_bar.update_traces(marker_line_width=0, width=0.65)
-            fig_strat_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
-            fig_strat_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
-            fig_strat_bar.update_yaxes(tickfont=dict(size=16), title="Strategy")
-            st.plotly_chart(fig_strat_bar, use_container_width=True)
-        with col2:
-            fig_strat_pie = px.pie(
-                strat_data, values=nav_col, names=strat_col,
-                hole=0.45, color_discrete_sequence=PROFESSIONAL_COLORS
-            )
-            fig_strat_pie.update_layout(height=500, showlegend=True, paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_strat_pie, use_container_width=True)
-        # Insights
-        if not strat_data.empty:
-            st.markdown(f"""
-            <div class="insight-box">
-                <h3>Strategy Insights</h3>
-                <p>Dominant strategy: <b>{strat_data.iloc[0][strat_col]}</b> ({strat_data.iloc[0][nav_col]/total_nav*100:.1f}%)</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.subheader("NAV by Geography Over Periods")
+        geo_trend = filtered.groupby(['Period', geo_col])[nav_col].sum().reset_index()
+        fig = px.line(geo_trend, x='Period', y=nav_col, color=geo_col, markers=True, color_discrete_sequence=PROFESSIONAL_COLORS)
+        st.plotly_chart(fig, use_container_width=True)
 
     with tab3:
-        st.markdown('<div class="sub-header">NAV Distribution by Main Characteristic</div>', unsafe_allow_html=True)
-        char_data = filtered.groupby(char_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False)
-        col1, col2 = st.columns(2)
-        with col1:
-            fig_char_bar = px.bar(
-                char_data, x=nav_col, y=char_col, orientation='h', color=char_col,
-                color_discrete_sequence=PROFESSIONAL_COLORS, width=550, height=500
-            )
-            fig_char_bar.update_traces(marker_line_width=0, width=0.65)
-            fig_char_bar.update_layout(showlegend=True, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(40,45,60,0.8)')
-            fig_char_bar.update_xaxes(tickfont=dict(size=16), title="NAV (ILS)")
-            fig_char_bar.update_yaxes(tickfont=dict(size=16), title="Main Characteristic")
-            st.plotly_chart(fig_char_bar, use_container_width=True)
-        with col2:
-            fig_char_pie = px.pie(
-                char_data, values=nav_col, names=char_col,
-                hole=0.45, color_discrete_sequence=PROFESSIONAL_COLORS
-            )
-            fig_char_pie.update_layout(height=500, showlegend=True, paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_char_pie, use_container_width=True)
+        st.subheader("Strategy NAV in Selected Periods")
+        data = filtered.groupby([strat_col, 'Period'])[nav_col].sum().reset_index()
+        fig = px.bar(data, x='Period', y=nav_col, color=strat_col, barmode='group', color_discrete_sequence=PROFESSIONAL_COLORS)
+        st.plotly_chart(fig, use_container_width=True)
 
-    with tab4:
-        st.markdown('<div class="sub-header">Detailed Investment Data</div>', unsafe_allow_html=True)
-        # Drilldown
-        drill_type = st.radio("Drilldown by:", ["Geography", "Strategy", "Main Characteristic"], horizontal=True)
-        if drill_type == "Geography":
-            options = geo_options
-            chosen = st.selectbox("Select Geography", options)
-            sub_df = df[df[geo_col]==chosen] if chosen in df[geo_col].unique() else df
-        elif drill_type == "Strategy":
-            options = strat_options
-            chosen = st.selectbox("Select Strategy", options)
-            sub_df = df[df[strat_col]==chosen] if chosen in df[strat_col].unique() else df
-        else:
-            options = char_options
-            chosen = st.selectbox("Select Main Characteristic", options)
-            sub_df = df[df[char_col]==chosen] if chosen in df[char_col].unique() else df
-
-        st.dataframe(sub_df, use_container_width=True)
-        st.download_button(
-            "Download filtered data", sub_df.to_csv(index=False).encode("utf-8-sig"),
-            file_name="filtered_investments.csv", mime="text/csv"
-        )
-
-    with tab5:
-        st.markdown('<div class="sub-header">Additional Insights</div>', unsafe_allow_html=True)
-
-        # Example: Israel vs. International
-        if geo_col:
-            df['Israel_Flag'] = df[geo_col].apply(lambda x: 'Israel' if str(x).strip().lower() in ['israel', 'ישראל', 'il'] else 'International')
-            israel_data = df.groupby('Israel_Flag')[nav_col].sum().reset_index()
-            col1, col2 = st.columns(2)
-            with col1:
-                fig = px.bar(israel_data, x='Israel_Flag', y=nav_col, color='Israel_Flag',
-                             color_discrete_sequence=PROFESSIONAL_COLORS)
-                st.plotly_chart(fig, use_container_width=True)
-            with col2:
-                pie = px.pie(israel_data, values=nav_col, names='Israel_Flag', hole=0.45,
-                             color_discrete_sequence=PROFESSIONAL_COLORS)
-                st.plotly_chart(pie, use_container_width=True)
-
-        # Currency
-        if currency_col:
-            currency_data = df.groupby(currency_col)[nav_col].sum().reset_index()
-            st.subheader(f"NAV by {currency_col}")
-            fig = px.bar(currency_data, x=currency_col, y=nav_col, color=currency_col,
-                         color_discrete_sequence=PROFESSIONAL_COLORS)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Year (if available)
-        if year_col:
-            df['Year'] = pd.to_datetime(df[year_col], errors='coerce').dt.year
-            year_data = df.groupby('Year')[nav_col].sum().reset_index().dropna()
-            st.subheader("NAV by Year")
-            fig = px.bar(year_data, x='Year', y=nav_col, color='Year',
-                         color_discrete_sequence=PROFESSIONAL_COLORS)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # GP Analysis
-        if gp_col:
-            gp_data = df.groupby(gp_col)[nav_col].sum().reset_index().sort_values(by=nav_col, ascending=False).head(10)
-            st.subheader(f"Top 10 {gp_col} by NAV")
-            fig = px.bar(gp_data, x=nav_col, y=gp_col, orientation='h', color=gp_col,
-                         color_discrete_sequence=PROFESSIONAL_COLORS)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # Concentration/HHI
-        geo_data = filtered.groupby(geo_col)[nav_col].sum().reset_index()
-        strat_data = filtered.groupby(strat_col)[nav_col].sum().reset_index()
-        top_geo = geo_data.iloc[0][geo_col] if not geo_data.empty else "-"
-        top_geo_pct = geo_data.iloc[0][nav_col]/total_nav*100 if not geo_data.empty else 0
-        top_strat = strat_data.iloc[0][strat_col] if not strat_data.empty else "-"
-        top_strat_pct = strat_data.iloc[0][nav_col]/total_nav*100 if not strat_data.empty else 0
-        geo_hhi = ((geo_data[nav_col] / total_nav) ** 2).sum() * 10000 if not geo_data.empty else 0
-        strat_hhi = ((strat_data[nav_col] / total_nav) ** 2).sum() * 10000 if not strat_data.empty else 0
-
-        st.markdown(f"""
-        <div class="insight-box">
-        <h3>Portfolio Concentration</h3>
-        Top Geography: <b>{top_geo}</b> ({top_geo_pct:.1f}%)<br>
-        Top Strategy: <b>{top_strat}</b> ({top_strat_pct:.1f}%)<br>
-        Geography HHI: <b>{geo_hhi:.0f}</b> &nbsp;&nbsp;|&nbsp; Strategy HHI: <b>{strat_hhi:.0f}</b>
-        </div>
-        """, unsafe_allow_html=True)
+    st.subheader("Raw Data")
+    st.dataframe(filtered, use_container_width=True)
+    st.download_button("Download filtered data", filtered.to_csv(index=False).encode("utf-8-sig"), file_name="quarterly_filtered.csv", mime="text/csv")
 
 def main():
-    st.sidebar.title("Investment Funds Analysis")
-    uploaded_file = st.sidebar.file_uploader("Upload Excel File", type=["xlsx", "xls"])
-    if uploaded_file is not None:
-        df = load_data(uploaded_file)
-        if df is not None:
-            create_dashboard(df)
+    st.title("Investment Funds Quarterly Comparison")
+    uploaded_files = st.sidebar.file_uploader("Upload Excel Files (quarterly)", type=["xlsx", "xls"], accept_multiple_files=True)
+    period_names = []
+    dfs = []
+
+    REQUIRED_COLS = ['Investment Name', 'Geography', 'Strategy', 'NAV (ILS)']
+
+    if uploaded_files:
+        for upf in uploaded_files:
+            df = load_data(upf)
+            if df is not None:
+                missing = [col for col in REQUIRED_COLS if col not in df.columns]
+                if missing:
+                    st.warning(f"File {upf.name} missing columns: {missing}. Please rename or map columns in the Excel file.")
+                    continue
+                # בחירת עמודת תקופה (Period)
+                period_guess = None
+                for col in df.columns:
+                    if "רבעון" in col or "שנה" in col or "period" in col.lower() or "date" in col.lower():
+                        period_guess = col
+                        break
+                if not period_guess:
+                    period_guess = st.sidebar.text_input(f"Enter period/quarter column for file {upf.name}")
+                period_value = df[period_guess].iloc[0] if period_guess in df.columns else st.sidebar.text_input(f"Enter period label for {upf.name}")
+                period_names.append(str(period_value))
+                dfs.append(df)
+        if len(dfs) >= 2:
+            combined = merge_quarters(dfs, period_names)
+            create_dashboard(combined)
+        else:
+            st.info("Please upload at least two quarterly files for comparison.")
     else:
-        st.markdown('<div class="main-header">Investment Funds Analysis Dashboard</div>', unsafe_allow_html=True)
-        st.write("Please upload an Excel file containing investment funds data.")
+        st.info("Upload at least two Excel files (with columns: 'Investment Name', 'Geography', 'Strategy', 'NAV (ILS)', etc.)")
 
 if __name__ == "__main__":
     main()
