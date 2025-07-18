@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import collections
 import re
+import datetime
 
 st.set_page_config(
     page_title="Investment Funds Analysis Dashboard",
@@ -77,29 +78,44 @@ def detect_column(df, keywords, must_numeric=False, prefer_exact=None):
                 return col
     return candidates[0] if candidates else df.columns[0]
 
-# עדכון: פונקציה מתקדמת שמסדרת רבעונים ותקופות במגוון פורמטים
 def sort_quarters(periods):
     def quarter_key(period):
         s = period.replace(" ", "").replace("-", "").lower()
-        # אנגלית Q1-2024 או Q1/2024
         m = re.match(r"q([1-4])[^\d]?(\d{4})", s)
         if m:
             return (int(m.group(2)), int(m.group(1)))
-        # עברית: רבעון1/2024, רבעון1-2024, רבעון 1 2024
         m = re.match(r"רבעון\s*([1-4])[\s\-\/]?(\d{4})", period.replace("-", " ").replace("/", " "))
         if m:
             return (int(m.group(2)), int(m.group(1)))
-        # פורמט 2024Q1
         m = re.match(r"(\d{4})q([1-4])", s)
         if m:
             return (int(m.group(1)), int(m.group(2)))
-        # תאריך מלא (שנה-חודש, 2024-03)
         m = re.match(r"(\d{4})[\/\-](\d{2})", s)
         if m:
             return (int(m.group(1)), int(m.group(2)))
-        # ברירת מחדל: שים תקופה בסוף
         return (9999, 99)
     return sorted(periods, key=quarter_key)
+
+# ====== תוספת חשובה: המרה ל־Period_Date ======
+def parse_period_to_date(period):
+    s = str(period).strip().replace("-", " ").replace("/", " ").lower()
+    m = re.match(r"q([1-4])\s*(\d{4})", s)
+    if m:
+        year, quarter = int(m.group(2)), int(m.group(1))
+        return datetime.date(year, 1 + 3 * (quarter - 1), 1)
+    m = re.match(r"רבעון\s*([1-4])\s*(\d{4})", s)
+    if m:
+        year, quarter = int(m.group(2)), int(m.group(1))
+        return datetime.date(year, 1 + 3 * (quarter - 1), 1)
+    m = re.match(r"(\d{4})q([1-4])", s)
+    if m:
+        year, quarter = int(m.group(1)), int(m.group(2))
+        return datetime.date(year, 1 + 3 * (quarter - 1), 1)
+    m = re.match(r"(\d{4})\s*(\d{2})", s)
+    if m:
+        year, month = int(m.group(1)), int(m.group(2))
+        return datetime.date(year, month, 1)
+    return None
 
 def create_dashboard(df):
     if df is None or df.empty:
@@ -330,12 +346,24 @@ def create_dashboard(df):
                 df2['Period'] = period
                 dfs.append(df2)
                 period_labels.append(period)
-            sorted_periods = sort_quarters(period_labels)
 
-            # כאן אפשר להוסיף אפשרות לסדר עולה/יורד
+            # === השינוי העיקרי — סדר לפי Period_Date ===
+            all_data = pd.concat(dfs, ignore_index=True)
+            all_data = all_data.loc[:, ~all_data.columns.duplicated()]
+            all_data['Period_Date'] = all_data['Period'].apply(parse_period_to_date)
+            all_data = all_data.sort_values('Period_Date')
+
+            sorted_periods = all_data[['Period', 'Period_Date']].drop_duplicates().sort_values('Period_Date')['Period'].tolist()
+            all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
+            for col in ['Period', 'Geography', 'Strategy']:
+                if col in all_data.columns:
+                    all_data[col] = all_data[col].astype(str)
+
+            # אפשרות לשנות את כיוון הציר (לא חובה, אופציונלי)
             sort_order = st.radio("כיוון סידור התקופות", ["מהישן לחדש", "מהחדש לישן"], horizontal=True, index=0)
             if sort_order == "מהחדש לישן":
                 sorted_periods = list(reversed(sorted_periods))
+                all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
 
             st.markdown("#### סדר את התקופות שאתה רוצה לראות בגרף (גרור/סמן)")
             manual_periods = st.multiselect(
@@ -347,14 +375,7 @@ def create_dashboard(df):
             if len(manual_periods) != len(sorted_periods):
                 st.warning("יש לבחור את **כל** הרבעונים ולסדר אותם כרצונך.")
                 return
-            sorted_periods = manual_periods
-
-            all_data = pd.concat(dfs, ignore_index=True)
-            all_data = all_data.loc[:, ~all_data.columns.duplicated()]
-            all_data['Period'] = pd.Categorical(all_data['Period'], categories=sorted_periods, ordered=True)
-            for col in ['Period', 'Geography', 'Strategy']:
-                if col in all_data.columns:
-                    all_data[col] = all_data[col].astype(str)
+            all_data['Period'] = pd.Categorical(all_data['Period'], categories=manual_periods, ordered=True)
 
             st.markdown("### שינוי חשיפה לפי Geography")
             if 'Geography' in all_data.columns and 'NAV (ILS)' in all_data.columns:
